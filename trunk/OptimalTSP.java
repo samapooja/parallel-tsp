@@ -39,7 +39,10 @@ public class OptimalTSP {
 	OptimalTSP(Graph inputGraph, int depth) {
 		graphMatrix = inputGraph.getMatrix();
 		optimalCost = Long.MAX_VALUE;
-		max_depth = depth;
+		if(graphMatrix.length <= depth)
+			max_depth = graphMatrix.length - 1;
+		else
+			max_depth = depth;
 	}
 
 	/**
@@ -74,15 +77,24 @@ public class OptimalTSP {
 	}
 
 	/**
-	 * Should return the smallest cost
-	 * in the branch
+	 * Recursively branches until it reaches the max_depth
+	 * it then binds and calculates the shortest path cost
+	 * at the specified branch.
 	 **/
 	public void branch(int[] path, double cur_cost, int depth) {
+		// Cost is too high, useless to bother attempting
 		if(cur_cost > optimalCost) return;
+
 		depth++;
+
+		// depth reaches the maximum, stop branching
 		if(depth > max_depth) {
 			int[] new_path = new int[graphMatrix[0].length];
 			System.arraycopy(path, 0, new_path, 0, path.length);
+
+			// This will fill in new_path with nodes that aren't
+			// currently in it
+			// TODO find a better way, this works but its ugly
 			int location = depth;
 			for (int x = 0; x < new_path.length; x++) {
 				boolean found = false;
@@ -97,6 +109,7 @@ public class OptimalTSP {
 					location++;
 				}
 			}
+
 			bind(new_path, depth);
 			return;
 		}
@@ -123,7 +136,7 @@ public class OptimalTSP {
 	}
 
 	public void bind(int[] input, int offset) {
-		if(input.length - offset == 1) {
+		if(input.length - offset <= 1) {
 			int[] output = new int[input.length];
 			System.arraycopy(input, 0, output,0,input.length);
 			testPath(output);
