@@ -15,20 +15,26 @@ import java.text.DecimalFormat;
  */
 public class OptimalTSP {
 	Graph optGraph;
-	double[][] graphMatrix;
+	long[][] graphMatrix;
 	int[] optimalPath;
-	double optimalCost;
+	long optimalCost;
 	int[] input;
 	int graphSize;
 	DecimalFormat formatter;
+
 	public static void main(String[] args) {
 		int size = Integer.parseInt(args[0]);
 		int seed = Integer.parseInt(args[1]);
-		Graph theGraph = new Graph(size, seed);
+
+		Graph theGraph = new Graph(size);
+		theGraph.randomize(100);
+		theGraph.printMatrix();
 		OptimalTSP solver = new OptimalTSP(theGraph, size);
+
 		long start = System.currentTimeMillis();
 		solver.permutations(1);
 		long stop = System.currentTimeMillis();
+
 		System.out.println();
 		solver.displayOptimal();
 		System.out.println("Runtime for optimal TSP   : " + (stop-start) + " milliseconds");
@@ -37,8 +43,9 @@ public class OptimalTSP {
 	OptimalTSP(Graph inputGraph, int size) {
 		optGraph = inputGraph;
 		graphMatrix = optGraph.getMatrix();
+
 		formatter = new DecimalFormat("0.00");
-		optimalCost = Double.POSITIVE_INFINITY;
+		optimalCost = Long.MAX_VALUE;
 		graphSize = size;
 
 		input = new int[size];
@@ -55,23 +62,16 @@ public class OptimalTSP {
 		}
 		System.out.println("0");
 	}
-	public void setOptimal(int[] newPath){
-		optimalPath = newPath;
-	}
 
 	public double testPath(int[] testPath) {
-		double cost = 0;
+		long cost = 0;
 		int x = 0;
-		if (graphSize < 10) System.out.print("Path: ");
+
 		for(x = 0; x < (testPath.length-1); x++) {
-			if(graphSize < 10) System.out.print(testPath[x] + " ");
 			cost += graphMatrix[testPath[x]][testPath[x+1]];
 		}
 		cost += graphMatrix[testPath[x]][0];
-		if(graphSize < 10) {
-			System.out.print(testPath[x] + " 0");
-			System.out.println(" distance = " + formatter.format(cost));
-		}
+		
 		if(cost < optimalCost) {
 			optimalPath = testPath;
 			optimalCost = cost;
