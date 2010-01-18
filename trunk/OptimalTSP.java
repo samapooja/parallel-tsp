@@ -97,21 +97,9 @@ public class OptimalTSP {
 		
 		// Cost is too high, useless to bother attempting
 		long heuristic_val = 0;
-		/*
 		for(int x : free_nodes) {
-			if(free_nodes.length < 3) break;
-			long min1 = Long.MAX_VALUE;
-			long min2 = Long.MAX_VALUE;
-			for(int y : free_nodes) {
-				if(x == y) break;
-				if(min2 > graphMatrix[x][y]) {
-					min1 = min2;
-					min2 = graphMatrix[x][y];
-				}
-			}
-			heuristic_val += (min1 + min2);
+			heuristic_val += getMatrixMin(x);
 		}
-		*/
 		if((cur_cost+heuristic_val) > optimalCost) return;
 
 		depth++;
@@ -143,7 +131,24 @@ public class OptimalTSP {
 			branch(new_path, new_free, new_cost, depth);
 		}
 	}
-
+	
+	public double getMatrixMin(int index) {
+		double minVal = 0;
+		double minVal2 = 0;
+		if(index == 0) {
+			minVal = graphMatrix[index][1];
+		} else {
+			minVal = graphMatrix[index][0];
+		}
+		minVal2 = minVal;
+		for(int x = 0; x < graphMatrix[index].length; x++) {
+			if(x != index && graphMatrix[index][x] < minVal) {
+				minVal2 = minVal;
+				minVal = graphMatrix[index][x];
+			}
+		}
+		return minVal * 2;
+	}
 	/**
 	 * This cuts an array element out of the array
 	 **/
