@@ -8,11 +8,12 @@ public class OptimalTSP {
 	long[][] graphMatrix;
 	int[] optimalPath;
 	long optimalCost;
-	int[] input;
+	int max_depth = 8;
 
 	public static void main(String[] args) {
 		String inputName = args[0];
-		
+		int depth = Integer.parseInt(args[1]);
+
 		Graph theGraph = new Graph();
 		try {
 			theGraph.loadMatrix(args[0]);
@@ -21,10 +22,12 @@ public class OptimalTSP {
 			System.exit(0);
 		}
 
-		OptimalTSP solver = new OptimalTSP(theGraph);
+		OptimalTSP solver = new OptimalTSP(theGraph, depth);
 
 		long start = System.currentTimeMillis();
-		solver.permutations(1);
+		int[] start_path = new int[1];
+		start_path[0] = 0;
+		solver.branch(start_path, 0, 0);
 		long stop = System.currentTimeMillis();
 
 		System.out.println();
@@ -33,14 +36,10 @@ public class OptimalTSP {
 
 	}
 
-	OptimalTSP(Graph inputGraph) {
+	OptimalTSP(Graph inputGraph, int depth) {
 		graphMatrix = inputGraph.getMatrix();
 		optimalCost = Long.MAX_VALUE;
-
-		input = new int[graphMatrix.length];
-		for(int x = 0; x < graphMatrix.length; x++){
-			input[x] = x;
-		}
+		max_depth = depth;
 	}
 
 	/**
@@ -74,7 +73,56 @@ public class OptimalTSP {
 		return cost;
 	}
 
-	public void permutations(int offset) {
+	/**
+	 * Should return the smallest cost
+	 * in the branch
+	 **/
+	public void branch(int[] path, double cur_cost, int depth) {
+		if(cur_cost > optimalCost) return;
+		depth++;
+		if(depth > max_depth) {
+			int[] new_path = new int[graphMatrix[0].length];
+			System.arraycopy(path, 0, new_path, 0, path.length);
+			int location = depth;
+			for (int x = 0; x < new_path.length; x++) {
+				boolean found = false;
+				for(int y : new_path) {
+					if(y == x) {
+						found = true;
+						break;
+					}
+				}
+				if(!found) {
+					new_path[location] = x;
+					location++;
+				}
+			}
+			bind(new_path, depth);
+			return;
+		}
+
+		int working_node = path[path.length-1];
+		for(int x = 0; x < graphMatrix[0].length; x++) {
+			if(x != working_node) {
+				boolean found = false;
+				for (int y : path) {
+					if(y == x) {
+						found = true;
+						break;
+					}
+				}
+				if(!found) {
+					double new_cost = cur_cost + graphMatrix[working_node][x];
+					int[] new_path = new int[depth+1];
+					System.arraycopy(path, 0, new_path, 0, path.length);
+					new_path[new_path.length-1] = x;
+					branch(new_path, new_cost, depth);
+				}
+			}
+		}
+	}
+
+	public void bind(int[] input, int offset) {
 		if(input.length - offset == 1) {
 			int[] output = new int[input.length];
 			System.arraycopy(input, 0, output,0,input.length);
@@ -87,7 +135,7 @@ public class OptimalTSP {
 			input[i] = x;
 			input[offset] = y;
 
-			permutations(offset+1);
+			bind(input, offset+1);
 			input[i] = y;
 		}
 		input[offset] = x;
