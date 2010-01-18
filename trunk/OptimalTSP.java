@@ -25,9 +25,9 @@ public class OptimalTSP {
 		OptimalTSP solver = new OptimalTSP(theGraph, depth);
 
 		long start = System.currentTimeMillis();
-		int[] start_path = new int[1];
-		start_path[0] = 0;
-		solver.branch(start_path, 0, 0);
+		int[] start_path = {0};
+		int[] free_nodes = solver.nodeList();
+		solver.branch(start_path, free_nodes, 0, 0);
 		long stop = System.currentTimeMillis();
 
 		System.out.println();
@@ -43,6 +43,17 @@ public class OptimalTSP {
 			max_depth = graphMatrix.length - 1;
 		else
 			max_depth = depth;
+	}
+
+	/**
+	 * Generates an array of all nodes
+	 **/
+	public int[] nodeList() {
+		int[] nodes = new int[graphMatrix.length-1];
+		for(int x = 1; x < graphMatrix.length; x++) {
+			nodes[x-1] = x;
+		}
+		return nodes;
 	}
 
 	/**
@@ -81,9 +92,27 @@ public class OptimalTSP {
 	 * it then binds and calculates the shortest path cost
 	 * at the specified branch.
 	 **/
-	public void branch(int[] path, double cur_cost, int depth) {
+	public void branch(int[] path, int[] free_nodes, double cur_cost, int depth) {
+		int working_node = path[path.length-1];
+		
 		// Cost is too high, useless to bother attempting
-		if(cur_cost > optimalCost) return;
+		long heuristic_val = 0;
+		/*
+		for(int x : free_nodes) {
+			if(free_nodes.length < 3) break;
+			long min1 = Long.MAX_VALUE;
+			long min2 = Long.MAX_VALUE;
+			for(int y : free_nodes) {
+				if(x == y) break;
+				if(min2 > graphMatrix[x][y]) {
+					min1 = min2;
+					min2 = graphMatrix[x][y];
+				}
+			}
+			heuristic_val += (min1 + min2);
+		}
+		*/
+		if((cur_cost+heuristic_val) > optimalCost) return;
 
 		depth++;
 
@@ -94,45 +123,41 @@ public class OptimalTSP {
 
 			// This will fill in new_path with nodes that aren't
 			// currently in it
-			// TODO find a better way, this works but its ugly
-			int location = depth;
-			for (int x = 0; x < new_path.length; x++) {
-				boolean found = false;
-				for(int y : new_path) {
-					if(y == x) {
-						found = true;
-						break;
-					}
-				}
-				if(!found) {
-					new_path[location] = x;
-					location++;
-				}
-			}
+			System.arraycopy(free_nodes, 0, new_path,
+							 path.length, free_nodes.length);
 
 			bind(new_path, depth);
 			return;
 		}
 
-		int working_node = path[path.length-1];
-		for(int x = 0; x < graphMatrix[0].length; x++) {
-			if(x != working_node) {
-				boolean found = false;
-				for (int y : path) {
-					if(y == x) {
-						found = true;
-						break;
-					}
-				}
-				if(!found) {
-					double new_cost = cur_cost + graphMatrix[working_node][x];
-					int[] new_path = new int[depth+1];
-					System.arraycopy(path, 0, new_path, 0, path.length);
-					new_path[new_path.length-1] = x;
-					branch(new_path, new_cost, depth);
-				}
-			}
+		for(int x = 0; x < free_nodes.length; x++) {
+			int new_node = free_nodes[x];
+			double new_cost = cur_cost + graphMatrix[working_node][new_node];
+
+			// Create a new path and list of free nodes
+			int[] new_path = new int[depth+1];
+			System.arraycopy(path, 0, new_path, 0, path.length);
+			int[] new_free = OptimalTSP.arrayCut(free_nodes, x);
+			
+			new_path[new_path.length-1] = new_node;
+			branch(new_path, new_free, new_cost, depth);
 		}
+	}
+
+	/**
+	 * This cuts an array element out of the array
+	 **/
+	public static int[] arrayCut(int[] c_arr, int index) {
+		int[] new_arr = new int[c_arr.length - 1];
+		if(index != 0 && index != c_arr.length-1) {
+			System.arraycopy(c_arr, 0, new_arr, 0, index);
+			System.arraycopy(c_arr, index+1, new_arr, index, c_arr.length - (index+1));
+		} else if(index == 0 && c_arr.length != 1) {
+			System.arraycopy(c_arr, 1, new_arr, 0, c_arr.length-1);
+		} else if(index == c_arr.length-1) {
+			System.arraycopy(c_arr, 0, new_arr, 0, c_arr.length-1);
+		}
+		return new_arr;
 	}
 
 	public void bind(int[] input, int offset) {
