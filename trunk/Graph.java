@@ -8,6 +8,10 @@
  *     $Log$
  */
 import java.util.Random;
+import java.util.Scanner;
+import java.io.File;
+import java.io.PrintStream;
+import java.io.FileOutputStream;
 import java.text.DecimalFormat;
 /**
  * This is the graph glass for the traveling salesman problem
@@ -17,14 +21,22 @@ import java.text.DecimalFormat;
 public class Graph {
 	private long weights[][];
 	private int graphSize;
-	private int edgeCount;
+
+	Graph() {
+		graphSize = 0;
+		weights = null;
+	}
 
 	Graph(int size) {
 		graphSize = size;
 		weights = new long[size][size];
-		edgeCount = 0;
 	}
-
+	
+	/**
+	 * This simply generates a randomized graph
+	 * for testability, this will probably need
+	 * to accept a seed at some point
+	 **/
 	public void randomize(int max) {
 		Random rng = new Random();
 		for(int x = 0; x < graphSize; x++) {
@@ -61,6 +73,28 @@ public class Graph {
 				}
 			}
 			System.out.println("\n");
+		}
+	}
+
+	public void saveMatrix(String filename) throws Exception {
+		PrintStream output = new PrintStream(new FileOutputStream(filename));
+		output.println(graphSize);
+		for(int x = 0; x < graphSize; x++) {
+			for(int y = 0; y < graphSize; y++) {
+				output.print(weights[x][y] + " ");
+			}
+			output.println();
+		}
+	}
+
+	public void loadMatrix(String filename) throws Exception {
+		Scanner input = new Scanner(new File(filename));
+		graphSize = input.nextInt();
+		weights = new long[graphSize][graphSize];
+		for(int x = 0; x < graphSize; x++) {
+			for(int y = 0; y < graphSize; y++) {
+				weights[x][y] = input.nextLong();
+			}
 		}
 	}
 }

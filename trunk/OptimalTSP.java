@@ -1,35 +1,27 @@
-/*
- * OptimalTSP.java
- *
- * Version:
- *     $Id$
- *
- * Revisions:
- *     $Log$
- */
-import java.text.DecimalFormat;
 /**
- * 
+ * This class implements a brute force search
+ * for the traveling salesman problem
  *
  * @author   Robert Clark
  */
 public class OptimalTSP {
-	Graph optGraph;
 	long[][] graphMatrix;
 	int[] optimalPath;
 	long optimalCost;
 	int[] input;
-	int graphSize;
-	DecimalFormat formatter;
 
 	public static void main(String[] args) {
-		int size = Integer.parseInt(args[0]);
-		int seed = Integer.parseInt(args[1]);
+		String inputName = args[0];
+		
+		Graph theGraph = new Graph();
+		try {
+			theGraph.loadMatrix(args[0]);
+		} catch(Exception e) {
+			System.out.println("Unable to save matrix");
+			System.exit(0);
+		}
 
-		Graph theGraph = new Graph(size);
-		theGraph.randomize(100);
-		theGraph.printMatrix();
-		OptimalTSP solver = new OptimalTSP(theGraph, size);
+		OptimalTSP solver = new OptimalTSP(theGraph);
 
 		long start = System.currentTimeMillis();
 		solver.permutations(1);
@@ -38,24 +30,24 @@ public class OptimalTSP {
 		System.out.println();
 		solver.displayOptimal();
 		System.out.println("Runtime for optimal TSP   : " + (stop-start) + " milliseconds");
+
 	}
 
-	OptimalTSP(Graph inputGraph, int size) {
-		optGraph = inputGraph;
-		graphMatrix = optGraph.getMatrix();
-
-		formatter = new DecimalFormat("0.00");
+	OptimalTSP(Graph inputGraph) {
+		graphMatrix = inputGraph.getMatrix();
 		optimalCost = Long.MAX_VALUE;
-		graphSize = size;
 
-		input = new int[size];
-		for(int x = 0; x < size; x++){
+		input = new int[graphMatrix.length];
+		for(int x = 0; x < graphMatrix.length; x++){
 			input[x] = x;
 		}
 	}
 
+	/**
+	 * Print out the current optimal path
+	 **/
 	public void displayOptimal() {
-		System.out.print("Optimal distance: " + formatter.format(optimalCost));
+		System.out.print("Optimal distance: " + optimalCost);
 		System.out.print(" for path ");
 		for(int x = 0; x < optimalPath.length; x++) {
 			System.out.print(optimalPath[x] + " ");
@@ -69,6 +61,9 @@ public class OptimalTSP {
 
 		for(x = 0; x < (testPath.length-1); x++) {
 			cost += graphMatrix[testPath[x]][testPath[x+1]];
+			if(cost >= optimalCost) {
+				return 0;
+			}
 		}
 		cost += graphMatrix[testPath[x]][0];
 		
