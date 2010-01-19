@@ -9,6 +9,7 @@ public class OptimalTSP {
 	int[] optimalPath;
 	long optimalCost;
 	int max_depth = 8;
+	long[] matrixMins;
 
 	public static void main(String[] args) {
 		String inputName = args[0];
@@ -43,6 +44,8 @@ public class OptimalTSP {
 			max_depth = graphMatrix.length - 1;
 		else
 			max_depth = depth;
+
+		genMatrixMins();
 	}
 
 	/**
@@ -68,7 +71,7 @@ public class OptimalTSP {
 		System.out.println("0");
 	}
 
-	public double testPath(int[] testPath) {
+	public long testPath(int[] testPath) {
 		long cost = 0;
 		int x = 0;
 
@@ -92,13 +95,13 @@ public class OptimalTSP {
 	 * it then binds and calculates the shortest path cost
 	 * at the specified branch.
 	 **/
-	public void branch(int[] path, int[] free_nodes, double cur_cost, int depth) {
+	public void branch(int[] path, int[] free_nodes, long cur_cost, int depth) {
 		int working_node = path[path.length-1];
 		
 		// Cost is too high, useless to bother attempting
 		long heuristic_val = 0;
 		for(int x : free_nodes) {
-			heuristic_val += getMatrixMin(x);
+			heuristic_val += matrixMins[x];
 		}
 		if((cur_cost+heuristic_val) > optimalCost) return;
 
@@ -120,7 +123,7 @@ public class OptimalTSP {
 
 		for(int x = 0; x < free_nodes.length; x++) {
 			int new_node = free_nodes[x];
-			double new_cost = cur_cost + graphMatrix[working_node][new_node];
+			long new_cost = cur_cost + graphMatrix[working_node][new_node];
 
 			// Create a new path and list of free nodes
 			int[] new_path = new int[depth+1];
@@ -132,23 +135,27 @@ public class OptimalTSP {
 		}
 	}
 	
-	public double getMatrixMin(int index) {
-		double minVal = 0;
-		double minVal2 = 0;
-		if(index == 0) {
-			minVal = graphMatrix[index][1];
-		} else {
-			minVal = graphMatrix[index][0];
-		}
-		minVal2 = minVal;
-		for(int x = 0; x < graphMatrix[index].length; x++) {
-			if(x != index && graphMatrix[index][x] < minVal) {
-				minVal2 = minVal;
-				minVal = graphMatrix[index][x];
+	/**
+	 * This method generates the matrix minimum values for each row
+	 **/
+	public void genMatrixMins() {
+		matrixMins = new long[graphMatrix.length];
+		for(int index = 0; index < graphMatrix.length; index++) {
+			long minVal = 0;
+			if(index == 0) {
+				minVal = graphMatrix[index][1];
+			} else {
+				minVal = graphMatrix[index][0];
 			}
+			for(int x = 0; x < graphMatrix[index].length; x++) {
+				if(x != index && graphMatrix[index][x] < minVal) {
+					minVal = graphMatrix[index][x];
+				}
+			}
+			matrixMins[index] = minVal;
 		}
-		return minVal * 2;
 	}
+
 	/**
 	 * This cuts an array element out of the array
 	 **/
