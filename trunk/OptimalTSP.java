@@ -174,8 +174,11 @@ public class OptimalTSP {
 		// calculate heuristic
 		long heuristic_val = 0;
 		for(int x : state.free_nodes) {
-			heuristic_val += matrixMins[x] * 2;
+			heuristic_val += matrixMins[x];
+			heuristic_val += matrixMins2[x];
 		}
+		heuristic_val = heuristic_val / 2;
+		heuristic_val += matrixMins[0];
 		heuristic_val += state.cost;
 		return heuristic_val;
 	}
@@ -193,12 +196,17 @@ public class OptimalTSP {
 			} else {
 				minVal = graphMatrix[index][0];
 			}
+			long minVal2 = minVal;
 			for(int x = 0; x < graphMatrix[index].length; x++) {
 				if(x != index && graphMatrix[index][x] < minVal) {
+					minVal2 = minVal;
 					minVal = graphMatrix[index][x];
+				} else if(x != index && graphMatrix[index][x] < minVal2) {
+					minVal2 = graphMatrix[index][x];
 				}
 			}
 			matrixMins[index] = minVal;
+			matrixMins2[index] = minVal2;
 		}
 	}
 
