@@ -161,7 +161,7 @@ public class OptimalTSP {
 					int[] new_free = OptimalTSP.arrayCut(cur_state.free_nodes, x);
 					
 					AlgoState new_state = new AlgoState(cur_state, new_node, new_free, new_cost, cur_state.depth+1);
-					long heuristic = calcHeuristic(cur_state);
+					long heuristic = calcHeuristic(new_state);
 					if(heuristic < optimalCost) {
 						branchStack.push(new_state);
 					}
