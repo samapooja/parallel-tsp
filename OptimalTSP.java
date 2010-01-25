@@ -34,7 +34,7 @@ public class OptimalTSP {
 		solver.displayOptimal();
 		long stop = System.currentTimeMillis();
 		System.out.println("Runtime for optimal TSP   : " + (stop-start) + " milliseconds");
-
+		System.out.println();
 	}
 
 	OptimalTSP(Graph inputGraph, int depth) {
@@ -90,77 +90,26 @@ public class OptimalTSP {
 		return cost;
 	}
 
-	private class AlgoState {
-		public AlgoState parent = null;
-		public int[] free_nodes;
-		public long cost;
-		public int depth;
-		public int node;
-
-		public AlgoState(int node, int[] free_nodes, long cost, int depth) {
-			this.free_nodes = free_nodes;
-			this.cost = cost;
-			this.depth = depth;
-			this.node = node;
-		}
-		public AlgoState(AlgoState parent, int node, int[] free_nodes, long cost, int depth) {
-			this.parent = parent;
-			this.free_nodes = free_nodes;
-			this.cost = cost;
-			this.depth = depth;
-			this.node = node;
-		}
-
-		public int[] path() {
-			int[] path = new int[depth];
-			AlgoState traverse = this;
-			for(int x = path.length-1; x >= 0; x--) {
-				path[x] = traverse.node;
-				traverse = traverse.parent;
-			}
-			return path;
-		}
-
-		public int[] pathAndPool() {
-			int[] path = new int[depth + this.free_nodes.length];
-			AlgoState traverse = this;
-			for(int x = depth-1; x >= 0; x--) {
-				path[x] = traverse.node;
-				traverse = traverse.parent;
-			}
-			System.arraycopy(free_nodes, 0, path,
-							 depth, free_nodes.length);
-			return path;
-		}
-	}
 	/**
 	 * Recursively branches until it reaches the max_depth
 	 * it then binds and calculates the shortest path cost
 	 * at the specified branch.
 	 **/
 	public void branch() {
-		Stack<AlgoState> branchStack = new Stack<AlgoState>();
-		int[] free_nodes = nodeList();
-		AlgoState start_state = new AlgoState(0, free_nodes, 0, 1);
+		Stack<SearchState> branchStack = new Stack<SearchState>();
+		SearchState start_state = new SearchState(nodeList(), this.graphMatrix);
 		branchStack.push(start_state);
 
 		while(!branchStack.empty()) {
-			AlgoState cur_state = branchStack.pop();
+			SearchState cur_state = branchStack.pop();
 			
 			// depth reaches the maximum, stop branching
 			if(cur_state.depth > max_depth) {
 				int[] new_path = cur_state.pathAndPool();
 				bind(new_path, cur_state.depth);
 			} else {
-
-				int working_node = cur_state.node;
-				for(int x = 0; x < cur_state.free_nodes.length; x++) {
-					int new_node = cur_state.free_nodes[x];
-					long new_cost = cur_state.cost + graphMatrix[working_node][new_node];
-
-					int[] new_free = OptimalTSP.arrayCut(cur_state.free_nodes, x);
-					
-					AlgoState new_state = new AlgoState(cur_state, new_node, new_free, new_cost, cur_state.depth+1);
+				for(int x = 0; x < cur_state.freeCount(); x++) {
+					SearchState new_state = cur_state.genNextState(x);
 					long heuristic = calcHeuristic(new_state);
 					if(heuristic < optimalCost) {
 						branchStack.push(new_state);
@@ -170,10 +119,10 @@ public class OptimalTSP {
 		}
 	}
 
-	public long calcHeuristic(AlgoState state) {
+	public long calcHeuristic(SearchState state) {
 		// calculate heuristic
 		long heuristic_val = 0;
-		for(int x : state.free_nodes) {
+		for(int x : state.getFreeNodes()) {
 			heuristic_val += matrixMins[x];
 			heuristic_val += matrixMins2[x];
 		}
@@ -210,17 +159,6 @@ public class OptimalTSP {
 		}
 	}
 
-	/**
-	 * This cuts an array element out of the array
-	 **/
-	public static int[] arrayCut(int[] c_arr, int index) {
-		int[] new_arr = new int[c_arr.length - 1];
-		System.arraycopy(c_arr, 0, new_arr, 0, index);
-		if(c_arr.length != index) {
-			System.arraycopy(c_arr, index + 1, new_arr, index, c_arr.length - index - 1);
-		}
-		return new_arr;
-	}
 
 	public void bind(int[] input, int offset) {
 		if(input.length - offset <= 1) {
