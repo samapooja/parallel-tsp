@@ -17,6 +17,7 @@ import java.text.DecimalFormat;
  * This is the graph glass for the traveling salesman problem
  *
  * @author   Robert Clark
+ * @author   Danny Iland
  */
 public class Graph {
 	private long weights[][];
@@ -38,18 +39,20 @@ public class Graph {
 	 * to accept a seed at some point
 	 **/
 	public void randomize(int max) {
-		Random rng = new Random();
-		for(int x = 0; x < graphSize; x++) {
-			for(int y = x; y < graphSize; y++) {
-				if(x == y) {
-					weights[x][y] = 0;
-				} else {
-					long next = rng.nextInt(max);
-					weights[x][y] = next;
-					weights[y][x] = next;
-				}
-			}
-		}
+            Random rng = new Random();
+            for(int x = 0; x < graphSize; x++) {
+                for(int y = x; y < graphSize; y++) {
+                    if(x == y) {
+                        weights[x][y] = 0;
+                    } else {
+                        // rnd.nextInt(max-1) generates a random int between 0 and n-1. 
+                        // Adding one guarantees next will be positive.
+                        long next = rng.nextInt(max-1) + 1;
+                        weights[x][y] = next;
+                        weights[y][x] = next;
+                    }
+                }
+            }
 	}
 
 	public long[][] getMatrix() {
