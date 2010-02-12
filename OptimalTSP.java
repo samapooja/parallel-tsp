@@ -10,6 +10,8 @@ public class OptimalTSP {
 	int[] optimalPath;
 	long optimalCost;
 	int max_depth = 8;
+	Stack<TSPState> rightStack;
+	Stack<TSPState> leftStack;
 
 	public class TSPState {
 		long[][] matrix;
@@ -17,6 +19,17 @@ public class OptimalTSP {
 			this.matrix = weightMatrix;
 		}
 		public long[][] matrix() { return matrix; }
+
+		// FAKE METHODS NEED IMPLEMENTATION!
+		public boolean isFinalState() {
+			return false;
+		}
+		public long calculateCost() {
+			return Long.MAX_VALUE;
+		}
+		public int[] getPath() {
+			return new int[weightMatrix.length];
+		}
 	}
 
 	public static void main(String[] args) {
@@ -32,7 +45,7 @@ public class OptimalTSP {
 		}
 
 		OptimalTSP solver = new OptimalTSP(theGraph);
-		solver.run();
+		solver.start();
 
 		long stop = System.currentTimeMillis();
 		System.out.println("Runtime for optimal TSP   : " + (stop-start) + " milliseconds");
@@ -47,19 +60,47 @@ public class OptimalTSP {
 		System.out.println(lower_bound);
 	}
 
-	public void run() {
-		Stack<TSPState> rightStack = new Stack<TSPState>();
-		Stack<TSPState> leftStack = new Stack<TSPState>();
-
+	public void start() {
+		rightStack = new Stack<TSPState>();
+		leftStack = new Stack<TSPState>();
 		long[][] startMatrix = new long[weightMatrix.length][weightMatrix.length];
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		OptimalTSP.reduce(startMatrix);
 		int[] startCoord = OptimalTSP.bestCoord(startMatrix);
 		System.out.println("( " + startCoord[0] + ", " + startCoord[1] + " )");
-
-		rightStack.push(new TSPState(OptimalTSP.rightSplit(startMatrix, startCoord[0], startCoord[1])));
 		leftStack.push(new TSPState(OptimalTSP.leftSplit(startMatrix, startCoord[0], startCoord[1])));
+		rightStack.push(new TSPState(OptimalTSP.rightSplit(startMatrix, startCoord[0], startCoord[1])));
+		run();
+
 	}
+
+	public void run() {
+		TSPState state;
+		while(!leftStack.empty() && !rightStack.empty() ) {
+			if(!leftStack.empty()) {
+				state = leftStack.pop();
+			} else {
+				state = rightStack.pop();
+			}
+			if( state.isFinalState() ) {
+				long thisCost = state.calculateCost();
+				if( thisCost < optimalCost ) {
+					optimalCost = thisCost;
+					optimalPath = state.getPath();
+				}
+			} else {
+				if ( OptimalTSP.reduce(state.matrix()) > optimalCost ) {
+					// Continuing down this path is worthless. Do nothing
+				} else {
+					int[] startCoord = OptimalTSP.bestCoord(state.matrix());
+					leftStack.push(new TSPState(OptimalTSP.leftSplit(state.matrix(), startCoord[0], startCoord[1])));
+					rightStack.push(new TSPState(OptimalTSP.rightSplit(state.matrix(), startCoord[0], startCoord[1])));
+				}
+			}
+		}
+	}
+
+
 
 	/*
 	 * This very ugly function calculates the coordinate where setting it to
@@ -133,6 +174,8 @@ public class OptimalTSP {
 	 * Reduces the values by first subtracting the minimum of every
 	 * column from each value, then subtracting the minimum of every
 	 * row from each value. This in essesence normalizes the data.
+	 * 
+	 * Returns the minimum possible value for a complete loop.
 	 */
 	public static long reduce(long[][] matrix) {
 		long lower_bound = 0;
