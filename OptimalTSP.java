@@ -13,32 +13,6 @@ public class OptimalTSP {
 	Stack<TSPState> rightStack;
 	Stack<TSPState> leftStack;
 
-	public class TSPState {
-		long[][] matrix;
-		public TSPState(long[][] weightMatrix) {
-			this.matrix = weightMatrix;
-		}
-		public long[][] matrix() { return matrix; }
-
-		// FAKE METHODS NEED IMPLEMENTATION!
-		// 
-		/**
-		 * Check if this array represents a final state,
-		 * a state that cannot be divided anymore, i.e. has only one path remaining.
-		 */
-		public boolean isFinalState() {
-			return false;
-		}
-		/**
-		 * This is a terminal node with only one path remaining.
-		 * Return that path.
-		 * @return
-		 */
-		public int[] getPath() {
-			return new int[weightMatrix.length];
-		}
-	}
-
 	public static void main(String[] args) {
 		long start = System.currentTimeMillis();
 		String inputName = args[0];
@@ -62,22 +36,22 @@ public class OptimalTSP {
 	OptimalTSP(Graph inputGraph) {
 		weightMatrix = inputGraph.getMatrix();
 		inputGraph.printMatrix();
-		long lower_bound = OptimalTSP.reduce(inputGraph.getMatrix());
-		inputGraph.printMatrix();
-		System.out.println(lower_bound);
 	}
 
 	public void start() {
 		rightStack = new Stack<TSPState>();
 		leftStack = new Stack<TSPState>();
 		long[][] startMatrix = new long[weightMatrix.length][weightMatrix.length];
+		OptimalTSP.printMatrix(startMatrix);
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		OptimalTSP.reduce(startMatrix);
-		int[] startCoord = OptimalTSP.bestCoord(startMatrix);
-		System.out.println("( " + startCoord[0] + ", " + startCoord[1] + " )");
-		leftStack.push(new TSPState(OptimalTSP.leftSplit(startMatrix, startCoord[0], startCoord[1])));
-		rightStack.push(new TSPState(OptimalTSP.rightSplit(startMatrix, startCoord[0], startCoord[1])));
-		run();
+		OptimalTSP.printMatrix(startMatrix);
+		TSPState startState = new TSPState(startMatrix, null);
+		leftStack.push(startState.leftSplit());
+		OptimalTSP.printMatrix(leftStack.peek().matrix());
+		rightStack.push(startState.rightSplit());
+		OptimalTSP.printMatrix(rightStack.peek().matrix());
+		// run();
 
 	}
 
@@ -100,60 +74,14 @@ public class OptimalTSP {
 				if ( OptimalTSP.reduce(state.matrix()) > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
 				} else {
-					int[] startCoord = OptimalTSP.bestCoord(state.matrix());
-					leftStack.push(new TSPState(OptimalTSP.leftSplit(state.matrix(), startCoord[0], startCoord[1])));
-					rightStack.push(new TSPState(OptimalTSP.rightSplit(state.matrix(), startCoord[0], startCoord[1])));
+					leftStack.push(state.leftSplit());
+					rightStack.push(state.rightSplit());
 				}
 			}
 		}
 	}
 
 
-
-	/*
-	 * This very ugly function calculates the coordinate where setting it to
-	 * infinity will result in the largest increase in lower bound
-	 */
-	public static int[] bestCoord(long[][] matrix) {
-		int[] retVal = new int[2];
-		long min = matrix[0][0];
-		long min2 = min;
-		int bestX = 0;
-		int secondBestX = 0;
-		int bestY = 0;
-		int secondBestY = 1;
-		if(min > matrix[0][1]) {
-			min2 = matrix[0][1];
-		}else{
-			min = matrix[0][1];
-			secondBestY = 0;
-			bestY = 1;
-		}
-		long bestVal = 0;
-		for(int x = 0; x < matrix.length; x++) {
-			min = Long.MAX_VALUE;
-			for(int y = 0; y < matrix[x].length; y++) {
-				if(matrix[x][y] < min) {
-					min2 = min;
-					secondBestY = bestY;
-					secondBestX = bestX;
-					min = matrix[x][y];
-					bestX = x;
-					bestY = y;
-				} else if (matrix[x][y] < min2) {
-					min2 = matrix[x][y];
-					secondBestY = y;
-					secondBestX = x;
-				}
-			}
-			if (min2 > bestVal) {
-				bestVal = min2;
-				retVal[0] = bestX;
-				retVal[1] = bestY;
-			}
-		}
-		return retVal;
-	}
 
 	/*
 	 * simply print a matrix
@@ -228,40 +156,5 @@ public class OptimalTSP {
 			lower_bound += min;
 		}
 		return lower_bound;
-	}
-
-	/*
-	 * Calculate the resulting weighted graph after a right split at coords x, y
-	 */
-	public static long[][] rightSplit(long[][] matrix, int x, int y) {
-		long[][] newmatrix = new long[matrix.length][matrix.length];
-		for(int c = 0; c < matrix.length; c++) {
-			System.arraycopy(matrix[c], 0, newmatrix[c], 0, matrix[c].length);
-		}
-		newmatrix[x][y] = Long.MAX_VALUE;
-		newmatrix[y][x] = Long.MAX_VALUE;
-		OptimalTSP.reduce(newmatrix);
-		return newmatrix;
-	}
-
-	/*
-	 * Calculate the resulting weighted graph after a left split at coords x, y
-	 */
-	public static long[][] leftSplit(long[][] matrix, int x, int y) {
-		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
-		int offset = 0;
-		for(int c = 0; c < matrix.length; c++) {
-			if(c == x) {
-				offset = 1;
-				continue;
-			}
-			System.arraycopy(matrix[c], 0, newmatrix[c-offset], 0, y);
-			if(matrix.length != y) {
-				System.arraycopy(matrix[c], y+1, newmatrix[c-offset], y, matrix[c].length - y - 1);
-			}
-		}
-		newmatrix[y][x] = Long.MAX_VALUE;
-		OptimalTSP.reduce(newmatrix);
-		return newmatrix;
 	}
 }
