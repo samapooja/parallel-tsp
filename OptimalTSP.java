@@ -15,7 +15,10 @@ public class OptimalTSP {
 
 	public static void main(String[] args) {
 		long start = System.currentTimeMillis();
-		String inputName = args[0];
+		if(args.length != 1) {
+			System.err.println("Usage: OptimalTSP graphFile");
+			System.exit(0);
+		}
 
 		Graph theGraph = new Graph();
 		try {
