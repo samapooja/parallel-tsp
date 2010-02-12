@@ -21,12 +21,19 @@ public class OptimalTSP {
 		public long[][] matrix() { return matrix; }
 
 		// FAKE METHODS NEED IMPLEMENTATION!
+		// 
+		/**
+		 * Check if this array represents a final state,
+		 * a state that cannot be divided anymore, i.e. has only one path remaining.
+		 */
 		public boolean isFinalState() {
 			return false;
 		}
-		public long calculateCost() {
-			return Long.MAX_VALUE;
-		}
+		/**
+		 * This is a terminal node with only one path remaining.
+		 * Return that path.
+		 * @return
+		 */
 		public int[] getPath() {
 			return new int[weightMatrix.length];
 		}
@@ -83,10 +90,11 @@ public class OptimalTSP {
 				state = rightStack.pop();
 			}
 			if( state.isFinalState() ) {
-				long thisCost = state.calculateCost();
+				int[] thisPath = state.getPath();
+				long thisCost = getCost(thisPath);
 				if( thisCost < optimalCost ) {
 					optimalCost = thisCost;
-					optimalPath = state.getPath();
+					optimalPath = thisPath;
 				}
 			} else {
 				if ( OptimalTSP.reduce(state.matrix()) > optimalCost ) {
@@ -170,6 +178,20 @@ public class OptimalTSP {
 		}
 	}
 
+	/** 
+	 * Returns the length to complete a cylce in the order specified.
+	 * @return
+	 */
+	public long getCost(int[] path) {
+		int distance = 0;
+		for(int i=0; i<path.length-1; i++) {
+			distance += weightMatrix[path[i]][path[i+1]];
+		}
+		distance += weightMatrix[path[path.length-1]][path[0]];
+		
+		return distance;
+	}
+	
 	/*
 	 * Reduces the values by first subtracting the minimum of every
 	 * column from each value, then subtracting the minimum of every
