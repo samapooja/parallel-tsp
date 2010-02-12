@@ -43,7 +43,7 @@ public class Graph {
             for(int x = 0; x < graphSize; x++) {
                 for(int y = x; y < graphSize; y++) {
                     if(x == y) {
-                        weights[x][y] = 0;
+                        weights[x][y] = Long.MAX_VALUE;
                     } else {
                         // rnd.nextInt(max-1) generates a random int between 0 and n-1. 
                         // Adding one guarantees next will be positive.
@@ -69,8 +69,8 @@ public class Graph {
 		for(int x = 0; x < graphSize; x++){
 			System.out.print(x + "\t");
 			for(int y = 0; y < graphSize; y++) {
-				if(weights[x][y] == 0) {
-					System.out.print("0\t");
+				if(weights[x][y] == Long.MAX_VALUE) {
+					System.out.print("Inf\t");
 				}else{
 					System.out.print(weights[x][y] + "\t");
 				}
