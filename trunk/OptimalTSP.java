@@ -83,7 +83,6 @@ public class OptimalTSP {
 
 				// Having it halt after completion, there's something wrong
 				// with the right states being created. 
-				return;
 			} else {
 				if ( state.getLowerBound() > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
