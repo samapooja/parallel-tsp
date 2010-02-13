@@ -45,11 +45,10 @@ public class OptimalTSP {
 		rightStack = new Stack<TSPState>();
 		leftStack = new Stack<TSPState>();
 		long[][] startMatrix = new long[weightMatrix.length][weightMatrix.length];
-		OptimalTSP.printMatrix(startMatrix);
+		//OptimalTSP.printMatrix(startMatrix);
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
-		OptimalTSP.reduce(startMatrix);
-		OptimalTSP.printMatrix(startMatrix);
 		TSPState startState = new TSPState(startMatrix, null);
+		OptimalTSP.printMatrix(startState.matrix());
 		int[] best = startState.bestCoord();
 		leftStack.push(startState.leftSplit(best));
 		OptimalTSP.printMatrix(leftStack.peek().matrix());
@@ -75,7 +74,7 @@ public class OptimalTSP {
 					optimalPath = thisPath;
 				}
 			} else {
-				if ( OptimalTSP.reduce(state.matrix()) > optimalCost ) {
+				if ( state.getLowerBound() > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
 				} else {
 					int[] best = state.bestCoord();
@@ -101,7 +100,7 @@ public class OptimalTSP {
 		for(int x = 0; x < matrix.length; x++){
 			System.out.print(x + "\t");
 			for(int y = 0; y < matrix[x].length; y++) {
-				if(matrix[x][y] == Long.MAX_VALUE) {
+				if(matrix[x][y] > Long.MAX_VALUE - 10000) {
 					System.out.print("Inf\t");
 				}else{
 					System.out.print(matrix[x][y] + "\t");
@@ -112,8 +111,7 @@ public class OptimalTSP {
 	}
 
 	/** 
-	 * Returns the length to complete a cylce in the order specified.
-	 * @return
+	 * Returns the length to complete a cycle in the order specified.
 	 */
 	public long getCost(int[] path) {
 		int distance = 0;
@@ -124,42 +122,5 @@ public class OptimalTSP {
 		
 		return distance;
 	}
-	
-	/*
-	 * Reduces the values by first subtracting the minimum of every
-	 * column from each value, then subtracting the minimum of every
-	 * row from each value. This in essesence normalizes the data.
-	 * 
-	 * Returns the minimum possible value for a complete loop.
-	 */
-	public static long reduce(long[][] matrix) {
-		long lower_bound = 0;
-		for(int x = 0; x < matrix.length; x++) {
-			long min = matrix[x][0];
-			for(int y = x; y < matrix[x].length; y++) {
-				min = Math.min(min, matrix[x][y]);
-			}
-			for(int y = x; y < matrix[x].length; y++) {
-				if(matrix[x][y] != Long.MAX_VALUE){
-					matrix[x][y] = matrix[x][y] - min;
-					matrix[y][x] = matrix[y][x] - min;
-				}
-			}
-			lower_bound += min;
-		}
-		for(int x = 0; x < matrix.length; x++) {
-			long min = matrix[0][x];
-			for(int y = x; y < matrix[x].length; y++) {
-				min = Math.min(min, matrix[y][x]);
-			}
-			for(int y = x; y < matrix[x].length; y++) {
-				if(matrix[x][y] != Long.MAX_VALUE){
-					matrix[x][y] = matrix[x][y] - min;
-					matrix[y][x] = matrix[y][x] - min;
-				}
-			}
-			lower_bound += min;
-		}
-		return lower_bound;
-	}
+
 }
