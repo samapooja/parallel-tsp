@@ -3,11 +3,19 @@ public class TSPState {
 	private final int[] nextBest;
 	private final long[][] matrix;
 	private final TSPState parent;
+	private long optimalCost;
 	public TSPState(long[][] weightMatrix, TSPState parent) {
 		this.matrix = weightMatrix;
 		this.nextBest = bestCoord();
 		this.parent = parent;
+		if(parent != null) {
+			optimalCost = parent.optimalCost + reduce();
+		} else {
+			optimalCost = reduce();
+		}
 	}
+		
+	public long getLowerBound() { return optimalCost; };
 	public long[][] matrix() { return matrix; }
 
 	// FAKE METHODS NEED IMPLEMENTATION!
@@ -31,6 +39,50 @@ public class TSPState {
 	}
 
 	/*
+	 * Reduces the values by first subtracting the minimum of every
+	 * column from each value, then subtracting the minimum of every
+	 * row from each value. This in essesence normalizes the data.
+	 * 
+	 * Returns the minimum possible value for a complete loop.
+	 */
+	public long reduce() {
+		long lower_bound = 0;
+		int length = matrix.length;
+		// For each row
+		for(int x = 0; x < length; x++) {
+			// discover this row's minimum
+			long min = matrix[x][0];
+			for(int y = 1; y < length; y++) {
+				if( matrix[x][y] < min ) {
+					min = matrix[x][y];
+				}
+			}
+			// The subtract it from each value
+			for(int y=0; y< length; y++) {
+				matrix[x][y] = matrix[x][y] - min;
+			}
+			// And add it to the lower bound.
+			lower_bound = lower_bound + min;
+		}
+		// For each column
+		for(int y = 0; y < length; y++) {
+			// discover this column's minimum
+			long min = matrix[0][y];
+			for(int x = 1; x < length; x++) {
+				if( matrix[x][y] < min ) {
+					min = matrix[x][y];
+				}
+			}
+			// The subtract it from each value
+			for(int x=0; x< length; x++) {
+				matrix[x][y] = matrix[x][y] - min;
+			}
+			// And add it to the lower bound.
+			lower_bound = lower_bound + min;
+		}
+		return lower_bound;
+	}
+	/*
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
 	public final TSPState leftSplit(int[] best) {
@@ -49,7 +101,6 @@ public class TSPState {
 			}
 		}
 		newmatrix[y][x] = Long.MAX_VALUE;
-		OptimalTSP.reduce(newmatrix);
 		return new TSPState(newmatrix, this);
 	}
 
@@ -65,7 +116,6 @@ public class TSPState {
 		}
 		newmatrix[x][y] = Long.MAX_VALUE;
 		newmatrix[y][x] = Long.MAX_VALUE;
-		OptimalTSP.reduce(newmatrix);
 		return new TSPState(newmatrix, this);
 	}
 
