@@ -1,3 +1,4 @@
+import java.util.HashMap;
 import java.util.Stack;
 /**
  * This class implements a brute force search
@@ -6,8 +7,9 @@ import java.util.Stack;
  * @author   Robert Clark
  */
 public class OptimalTSP {
+	long[][] staticMatrix;
 	long[][] weightMatrix;
-	int[] optimalPath;
+	HashMap<Integer, Integer> optimalPath;
 	long optimalCost = Long.MAX_VALUE;
 	int max_depth = 8;
 	Stack<TSPState> rightStack;
@@ -24,7 +26,7 @@ public class OptimalTSP {
 		try {
 			theGraph.loadMatrix(args[0]);
 		} catch(Exception e) {
-			System.out.println("Unable to save matrix");
+			System.out.println("Unable to load matrix");
 			System.exit(0);
 		}
 
@@ -38,7 +40,15 @@ public class OptimalTSP {
 
 	OptimalTSP(Graph inputGraph) {
 		weightMatrix = inputGraph.getMatrix();
+		int length = weightMatrix.length;
+
+		staticMatrix = new long[length][length];
 		inputGraph.printMatrix();
+		for(int i=0; i< length; i++ ) {
+			for(int j=0; j< length; j++ ) {
+				staticMatrix[i][j] = weightMatrix[i][j];
+			}
+		}
 	}
 
 	public void start() {
@@ -48,34 +58,47 @@ public class OptimalTSP {
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
 		leftStack.push(startState.leftSplit());
-		//rightStack.push(startState.rightSplit());
+		rightStack.push(startState.rightSplit());
+
 		run();
 	}
 
 	public void run() {
 		TSPState state;
 		while(!leftStack.empty() || !rightStack.empty() ) {
-			//if(!leftStack.empty()) {
+			if(!leftStack.empty()) {
 				state = leftStack.pop();
-//			} else {
-//				state = rightStack.pop();
-//			}
+			} else {
+				state = rightStack.pop();
+			}
 			if( state.isFinalState() ) {
-				int[] thisPath = state.getPath();
+				HashMap<Integer, Integer> thisPath = state.getPath();
 				long thisCost = getCost(thisPath);
+				
 				if( thisCost < optimalCost ) {
 					optimalCost = thisCost;
 					optimalPath = thisPath;
 				}
+				System.out.println("The shortest cycle is of distance " + optimalCost);
+
+				// Having it halt after completion, there's something wrong
+				// with the right states being created. 
+				return;
 			} else {
 				if ( state.getLowerBound() > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
 				} else {
 					leftStack.push(state.leftSplit());
-					//rightStack.push(state.rightSplit(best));
+					rightStack.push(state.rightSplit());
 				}
 			}
 		}
+		// This is where this should be. That return is just blocking all the badly
+		// created states from executing. Our focus should be on figuring out why
+		// the states are bad (lower bound = Long.MIN ? Weird shit) and fixing it.
+		// Once that happens, removing the return should result in a working TSP Solver.
+		// 
+		//System.out.println("The shortest cycle is of distance " + optimalCost);
 	}
 
 
@@ -106,12 +129,15 @@ public class OptimalTSP {
 	/** 
 	 * Returns the length to complete a cycle in the order specified.
 	 */
-	public long getCost(int[] path) {
-		int distance = 0;
-		for(int i=0; i<path.length-1; i++) {
-			distance += weightMatrix[path[i]][path[i+1]];
-		}
-		distance += weightMatrix[path[path.length-1]][path[0]];
+	public long getCost(HashMap<Integer, Integer> path) {
+		long distance = 0;
+		int start = 0;
+		int end = 0;
+		do {
+			end = path.get(start);
+			distance = distance + staticMatrix[start][end];
+			start = end;
+		} while (start != 0);
 		
 		return distance;
 	}

@@ -1,3 +1,4 @@
+import java.util.HashMap;
 
 public class TSPState {
 	private final int[] nextBest;
@@ -5,6 +6,7 @@ public class TSPState {
 	private final TSPState parent;
 	private final int[] columnMap;
 	private final int[] rowMap;
+	private final int[] theBest = new int[2];
 	private int size;
 	private long optimalCost;
 
@@ -53,29 +55,29 @@ public class TSPState {
 	 * a state that cannot be divided anymore, i.e. has only one path remaining.
 	 */
 	public boolean isFinalState() {
-		return (matrix.length < 2);
+		return (matrix.length < 1);
 	}
 	/**
 	 * This is a terminal node with only one path remaining.
 	 * Return that path.
 	 * @return
 	 */
-	public int[] getPath() {
-		int[] pathX = new int[size+1];
-		int[] pathY = new int[size+1];
+	public HashMap<Integer, Integer> getPath() {
+		HashMap<Integer, Integer> path = new HashMap<Integer, Integer>(size);
 		TSPState traversal = this.parent;
-		int x = 0;
 		while(traversal != null) {
-			pathX[x] = traversal.rowMap[traversal.bestCoord()[0]];
-			pathY[x] = traversal.columnMap[traversal.bestCoord()[1]];
+			path.put(traversal.theBest[0], traversal.theBest[1]);
+//			System.out.println("PUT: " + traversal.theBest[0] + "," + traversal.theBest[1]);
 			traversal = traversal.parent;
-			x++;
 		}
 		System.out.println("Printing best route:");
-		for(int c = 0; c < pathX.length; c++) {
-			System.out.println(pathX[c] + ", " + pathY[c]);
-		}
-		return new int[matrix.length];
+		int index = 0;
+		do {
+			System.out.print(index + " , ");
+			index = path.get(index);
+		} while (index != 0);
+		System.out.println(0);
+		return path;
 	}
 
 	/*
@@ -127,7 +129,7 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
 	public final TSPState leftSplit() {
-		System.out.println("Splitting Left");
+		System.out.println("Splitting Left, lower bound: " + optimalCost);
 		
 		int x = nextBest[0];
 		int y = nextBest[1];
@@ -148,19 +150,19 @@ public class TSPState {
 		int[] newRow = new int[matrix.length-1];
 		for (int c = 0; c < matrix.length-1; c++) {
 			if(c >= y){
-				System.out.println("Map col " + c + " to " + columnMap[c+1]);
+				//System.out.println("Map col " + c + " to " + columnMap[c+1]);
 				newCol[c] = columnMap[c+1];
 			}else{
 				newCol[c] = columnMap[c];
 			}
 			if(c >= x){
-				System.out.println("Map row " + c + " to " + rowMap[c+1]);
+				//System.out.println("Map row " + c + " to " + rowMap[c+1]);
 				newRow[c] = rowMap[c+1];
 			}else{
 				newRow[c] = rowMap[c];
 			}
 		}
-
+		
 		int columnExists = -1;
 		int rowExists = -1;
 
@@ -176,7 +178,6 @@ public class TSPState {
 		if(columnExists >= 0 && rowExists >= 0) {
 			newmatrix[rowExists][columnExists] = Long.MAX_VALUE;
 		}
-
 		return new TSPState(newmatrix, this, newCol, newRow, size);
 	}
 
@@ -184,7 +185,7 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
 	public final TSPState rightSplit() {
-		System.out.println("Splitting right");
+		System.out.println("Splitting right, lower bound: " + optimalCost);
 		int x = nextBest[0];
 		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
@@ -193,7 +194,16 @@ public class TSPState {
 		}
 		newmatrix[x][y] = Long.MAX_VALUE;
 		newmatrix[y][x] = Long.MAX_VALUE;
+
+		// This shouldn't really be here, but it needs to be run because they are looked
+		// at later.
+		fixNextBest();
 		return new TSPState(newmatrix, this, columnMap, rowMap, size);
+	}
+	
+	public final void fixNextBest() {
+		theBest[0] = rowMap[nextBest[0]];
+		theBest[1] = columnMap[nextBest[1]];
 	}
 
 	/*
@@ -225,7 +235,7 @@ public class TSPState {
 			}
 		}
 		// Return the lowest sum
-		System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
+		//System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
 		return retVal;
 	}
 
@@ -252,7 +262,6 @@ public class TSPState {
 	 * Print the state with labels reflecting ORIGINAL VALUES!
 	 */
 	public final void printMatrix () {
-		System.out.println("With proper headers:");
 		System.out.println("Adjacency matrix of graph weights:\n");
 		System.out.print("\t");
 		for(int x = 0; x < matrix.length; x++) 
