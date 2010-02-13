@@ -9,6 +9,7 @@ public class TSPState {
 	private final int[] theBest = new int[2];
 	private int size;
 	private long optimalCost;
+	private HashMap<Integer, Integer> path;
 
 	public TSPState(long[][] weightMatrix, TSPState parent) {
 		this.matrix = weightMatrix;
@@ -67,18 +68,15 @@ public class TSPState {
 	 * @return
 	 */
 	public HashMap<Integer, Integer> getPath() {
-		HashMap<Integer, Integer> path = new HashMap<Integer, Integer>(size);
-		TSPState traversal = this.parent;
-		int counter = size;
-		while(traversal != null && counter > 0) {
-			path.put(traversal.theBest[0], traversal.theBest[1]);
-			//System.out.println("PUT: " + traversal.theBest[0] + "," + traversal.theBest[1]);
-			traversal = traversal.parent;
-			// There seems to be a problem here! Counters to stop infinite output
-			counter --;
+		if(path == null) {
+			if(this.parent == null) {
+				path = new HashMap<Integer, Integer>(size);
+			} else {
+				path = (HashMap<Integer, Integer>)this.parent.getPath().clone();
+				path.put(this.parent.theBest[0], this.parent.theBest[1]);
+			}
 		}
-		
-		return path;
+		return this.path;
 	}
 
 	public static void printPath(HashMap<Integer, Integer> path) {
@@ -147,11 +145,11 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
 	public final TSPState leftSplit() {
-		//System.out.println("Splitting Left, lower bound: " + optimalCost);
-		
 		int x = nextBest[0];
 		int y = nextBest[1];
+
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
+
 		int offset = 0;
 		for(int c = 0; c < matrix.length; c++) {
 			// skip x
@@ -164,23 +162,16 @@ public class TSPState {
 				System.arraycopy(matrix[c], y+1, newmatrix[c-offset], y, matrix[c].length - y - 1);
 			}
 		}
+
 		int[] newCol = new int[matrix.length-1];
 		int[] newRow = new int[matrix.length-1];
-		for (int c = 0; c < matrix.length-1; c++) {
-			if(c >= y){
-				//System.out.println("Map col " + c + " to " + columnMap[c+1]);
-				newCol[c] = columnMap[c+1];
-			}else{
-				newCol[c] = columnMap[c];
-			}
-			if(c >= x){
-				//System.out.println("Map row " + c + " to " + rowMap[c+1]);
-				newRow[c] = rowMap[c+1];
-			}else{
-				newRow[c] = rowMap[c];
-			}
-		}
 		
+		// Map the old rows and columns into new rows and columns
+		System.arraycopy(columnMap, 0, newCol, 0, y);
+		System.arraycopy(columnMap, y+1, newCol, y, (matrix.length-1)-y);
+		System.arraycopy(rowMap, 0, newRow, 0, x);
+		System.arraycopy(rowMap, x+1, newRow, x, (matrix.length-1)-x);
+
 		int columnExists = -1;
 		int rowExists = -1;
 
@@ -203,7 +194,6 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
 	public final TSPState rightSplit() {
-		// System.out.println("Splitting right, lower bound: " + optimalCost);
 		int x = nextBest[0];
 		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
@@ -214,7 +204,6 @@ public class TSPState {
 			return null;
 		}
 		newmatrix[x][y] = Long.MAX_VALUE;
-		// newmatrix[y][x] = Long.MAX_VALUE;
 
 		// This shouldn't really be here, but it needs to be run because they are looked
 		// at later.
@@ -231,8 +220,6 @@ public class TSPState {
 	public final void fixNextBest() {
 		theBest[0] = rowMap[nextBest[0]];
 		theBest[1] = columnMap[nextBest[1]];
-		// System.out.println("Branching at: " + theBest[0] + " , " + theBest[1]);
-
 	}
 
 	/*
@@ -264,7 +251,6 @@ public class TSPState {
 			}
 		}
 		// Return the lowest sum
-		//System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
 		return retVal;
 	}
 
