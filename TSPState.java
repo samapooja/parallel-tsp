@@ -21,7 +21,10 @@ public class TSPState {
 			this.rowMap[x] = x;
 		}
 		if(parent != null) {
-			optimalCost = parent.optimalCost + reduce();
+			long reduction = reduce();
+			optimalCost = parent.optimalCost + reduction;
+			if(optimalCost < parent.optimalCost)
+				optimalCost = Long.MAX_VALUE;
 		} else {
 			optimalCost = reduce();
 		}
@@ -36,7 +39,10 @@ public class TSPState {
 		this.columnMap = columnMap;
 		this.size = size;
 		if(parent != null) {
-			optimalCost = parent.optimalCost + reduce();
+			long reduction = reduce();
+			optimalCost = parent.optimalCost + reduction;
+			if(optimalCost < parent.optimalCost)
+				optimalCost = Long.MAX_VALUE;
 		} else {
 			optimalCost = reduce();
 		}
@@ -71,17 +77,24 @@ public class TSPState {
 			// There seems to be a problem here! Counters to stop infinite output
 			counter --;
 		}
+		
+		return path;
+	}
+
+	public static void printPath(HashMap<Integer, Integer> path) {
 		System.out.println("Printing best route:");
 		int index = 0;
 		// Counter only exists to stop incorrect cycles, like the ones produced from bad 
-		counter = path.size();
+		int counter = path.size();
 		do {
 			System.out.print(index + " , ");
+			if(!path.containsKey(index)) {
+				return;
+			}
 			index = path.get(index);
 			counter--;
 		} while (index != 0 && counter > 0);
 		System.out.println(0);
-		return path;
 	}
 
 	/*
@@ -119,6 +132,7 @@ public class TSPState {
 					min = matrix[x][y];
 				}
 			}
+
 			// The subtract it from each value
 			for(int x=0; x< length; x++) {
 				matrix[x][y] = matrix[x][y] - min;
@@ -126,14 +140,14 @@ public class TSPState {
 			// And add it to the lower bound.
 			lower_bound = lower_bound + min;
 		}
-		printMatrix();
+		//printMatrix();
 		return lower_bound;
 	}
 	/*
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
 	public final TSPState leftSplit() {
-		System.out.println("Splitting Left, lower bound: " + optimalCost);
+		//System.out.println("Splitting Left, lower bound: " + optimalCost);
 		
 		int x = nextBest[0];
 		int y = nextBest[1];
@@ -189,26 +203,35 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
 	public final TSPState rightSplit() {
-		System.out.println("Splitting right, lower bound: " + optimalCost);
+		// System.out.println("Splitting right, lower bound: " + optimalCost);
 		int x = nextBest[0];
 		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
 		for(int c = 0; c < matrix.length; c++) {
 			System.arraycopy(matrix[c], 0, newmatrix[c], 0, matrix[c].length);
 		}
+		if(newmatrix[x][y] == Long.MAX_VALUE) {
+			return null;
+		}
 		newmatrix[x][y] = Long.MAX_VALUE;
-		newmatrix[y][x] = Long.MAX_VALUE;
+		// newmatrix[y][x] = Long.MAX_VALUE;
 
 		// This shouldn't really be here, but it needs to be run because they are looked
 		// at later.
 		fixNextBest();
-		return new TSPState(newmatrix, this, columnMap, rowMap, size);
+		TSPState newState = new TSPState(newmatrix, this, columnMap, rowMap, size);
+
+		if(newState.optimalCost == Long.MAX_VALUE) {
+			return null;
+		}
+
+		return newState;
 	}
 	
 	public final void fixNextBest() {
 		theBest[0] = rowMap[nextBest[0]];
 		theBest[1] = columnMap[nextBest[1]];
-		System.out.println("Branching at: " + theBest[0] + " , " + theBest[1]);
+		// System.out.println("Branching at: " + theBest[0] + " , " + theBest[1]);
 
 	}
 

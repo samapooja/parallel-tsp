@@ -75,11 +75,11 @@ public class OptimalTSP {
 				HashMap<Integer, Integer> thisPath = state.getPath();
 				long thisCost = getCost(thisPath);
 				
-				if( thisCost < optimalCost ) {
+				if( ( thisPath.size() >= staticMatrix.length ) && ( thisCost < optimalCost ) ) {
 					optimalCost = thisCost;
 					optimalPath = thisPath;
 				}
-				System.out.println("The shortest cycle is of distance " + optimalCost);
+				// System.out.println("The shortest cycle is of distance " + optimalCost);
 
 				// Having it halt after completion, there's something wrong
 				// with the right states being created. 
@@ -88,7 +88,9 @@ public class OptimalTSP {
 					// Continuing down this path is worthless. Do nothing
 				} else {
 					leftStack.push(state.leftSplit());
-					rightStack.push(state.rightSplit());
+					TSPState rightVal = state.rightSplit();
+					if(rightVal != null)
+						rightStack.push(state.rightSplit());
 				}
 			}
 		}
@@ -97,7 +99,9 @@ public class OptimalTSP {
 		// the states are bad (lower bound = Long.MIN ? Weird shit) and fixing it.
 		// Once that happens, removing the return should result in a working TSP Solver.
 		// 
-		//System.out.println("The shortest cycle is of distance " + optimalCost);
+		
+		System.out.println("The shortest cycle is of distance " + optimalCost);
+		TSPState.printPath(optimalPath);
 	}
 
 
@@ -132,12 +136,18 @@ public class OptimalTSP {
 		long distance = 0;
 		int start = 0;
 		int end = 0;
+		int count = 0;
 		do {
+			if(!path.containsKey(start))
+				return Long.MAX_VALUE;
 			end = path.get(start);
 			distance = distance + staticMatrix[start][end];
 			start = end;
+			count++;
 		} while (start != 0);
 		
+		if(count < path.size())
+			return Long.MAX_VALUE;
 		return distance;
 	}
 
