@@ -45,38 +45,21 @@ public class OptimalTSP {
 		rightStack = new Stack<TSPState>();
 		leftStack = new Stack<TSPState>();
 		long[][] startMatrix = new long[weightMatrix.length][weightMatrix.length];
-		//OptimalTSP.printMatrix(startMatrix);
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
-		OptimalTSP.printMatrix(startState.matrix());
-		
-		int[] best = startState.bestCoord();
-		leftStack.push(startState.leftSplit(best));
-		rightStack.push(startState.rightSplit(best));
-		int[] path = leftStack.peek().getPath();
-		OptimalTSP.printMatrix(leftStack.peek().matrix());
-		
-		best = leftStack.peek().bestCoord();
-		leftStack.push(leftStack.peek().leftSplit(best));
-		path = leftStack.peek().getPath();
-		
-		OptimalTSP.printMatrix(leftStack.peek().matrix());
-		
-		best = leftStack.peek().bestCoord();
-		leftStack.push(leftStack.peek().leftSplit(best));
-		path = leftStack.peek().getPath();
-		//run();
-
+		leftStack.push(startState.leftSplit());
+		rightStack.push(startState.rightSplit());
+		run();
 	}
 
 	public void run() {
 		TSPState state;
-		while(!leftStack.empty() && !rightStack.empty() ) {
-			if(!leftStack.empty()) {
+		while(!leftStack.empty() || !rightStack.empty() ) {
+			//if(!leftStack.empty()) {
 				state = leftStack.pop();
-			} else {
-				state = rightStack.pop();
-			}
+//			} else {
+//				state = rightStack.pop();
+//			}
 			if( state.isFinalState() ) {
 				int[] thisPath = state.getPath();
 				long thisCost = getCost(thisPath);
@@ -88,9 +71,8 @@ public class OptimalTSP {
 				if ( state.getLowerBound() > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
 				} else {
-					int[] best = state.bestCoord();
-					leftStack.push(state.leftSplit(best));
-					rightStack.push(state.rightSplit(best));
+					leftStack.push(state.leftSplit());
+					//rightStack.push(state.rightSplit(best));
 				}
 			}
 		}

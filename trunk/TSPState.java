@@ -11,7 +11,6 @@ public class TSPState {
 	public TSPState(long[][] weightMatrix, TSPState parent) {
 		this.matrix = weightMatrix;
 		this.size = weightMatrix.length;
-		this.nextBest = bestCoord();
 		this.parent = parent;
 		this.columnMap = new int[weightMatrix.length];
 		this.rowMap = new int[weightMatrix.length];
@@ -24,11 +23,12 @@ public class TSPState {
 		} else {
 			optimalCost = reduce();
 		}
+		this.nextBest = bestCoord();
+
 	}
 
 	public TSPState(long[][] weightMatrix, TSPState parent, int[] columnMap, int[] rowMap, int size) {
 		this.matrix = weightMatrix;
-		this.nextBest = bestCoord();
 		this.parent = parent;
 		this.rowMap = rowMap;
 		this.columnMap = columnMap;
@@ -38,6 +38,8 @@ public class TSPState {
 		} else {
 			optimalCost = reduce();
 		}
+		this.nextBest = bestCoord();
+
 	}
 
 		
@@ -122,9 +124,9 @@ public class TSPState {
 	/*
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
-	public final TSPState leftSplit(int[] best) {
-		int x = best[0];
-		int y = best[1];
+	public final TSPState leftSplit() {
+		int x = nextBest[0];
+		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
 		int offset = 0;
 		for(int c = 0; c < matrix.length; c++) {
@@ -154,17 +156,31 @@ public class TSPState {
 				newRow[c] = rowMap[c];
 			}
 		}
-
-		newmatrix[y][x] = Long.MAX_VALUE;
+		
+		boolean columnExists = false;
+		boolean rowExists = false;
+		
+		for(int i=0; i< newCol.length; i++) {
+			if (newCol[i] == x) {
+				columnExists = true;
+			}
+			if(newRow[i] == y) {
+				rowExists = true;
+			}
+		}
+		if(columnExists && rowExists) {
+			newmatrix[y][x] = Long.MAX_VALUE;
+		}
+		
 		return new TSPState(newmatrix, this, newCol, newRow, size);
 	}
 
 	/*
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
-	public final TSPState rightSplit(int[] best) {
-		int x = best[0];
-		int y = best[1];
+	public final TSPState rightSplit() {
+		int x = nextBest[0];
+		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
 		for(int c = 0; c < matrix.length; c++) {
 			System.arraycopy(matrix[c], 0, newmatrix[c], 0, matrix[c].length);
@@ -179,37 +195,36 @@ public class TSPState {
 	 * infinity will result in the largest increase in lower bound
 	 */
 	public final int[] bestCoord() {
+		printMatrix();
 		if(nextBest != null) return nextBest;
 		int[] retVal = new int[2];
-		long min = matrix[0][0];
-		long min2 = min;
-		int bestX = 0;
-		int bestY = 0;
-		if(min > matrix[0][1]) {
-			min2 = matrix[0][1];
-		}else{
-			min = matrix[0][1];
-			bestY = 1;
-		}
-		long bestVal = 0;
-		for(int x = 0; x < matrix.length; x++) {
-			min = Long.MAX_VALUE;
-			for(int y = 0; y < matrix[x].length; y++) {
-				if(matrix[x][y] < min) {
-					min2 = min;
-					min = matrix[x][y];
-					bestX = x;
-					bestY = y;
-				} else if (matrix[x][y] < min2) {
-					min2 = matrix[x][y];
-				}
-			}
-			if (min2 > bestVal) {
-				bestVal = min2;
-				retVal[0] = bestX;
-				retVal[1] = bestY;
-			}
-		}
+		
+		System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
 		return retVal;
 	}
+	
+	/*
+	 * Print the state with labels reflecting ORIGINAL VALUES!
+	 */
+	public void printMatrix () {
+		System.out.println("With proper headers:");
+		System.out.println("Adjacency matrix of graph weights:\n");
+		System.out.print("\t");
+		for(int x = 0; x < matrix.length; x++) 
+			System.out.print(columnMap[x] + "\t");
+
+		System.out.println("\n");
+		for(int x = 0; x < matrix.length; x++){
+			System.out.print(rowMap[x] + "\t");
+			for(int y = 0; y < matrix[x].length; y++) {
+				if(matrix[x][y] > Long.MAX_VALUE - 100000) {
+					System.out.print("Inf\t");
+				}else{
+					System.out.print(matrix[x][y] + "\t");
+				}
+			}
+			System.out.println("\n");
+		}
+	}
+	
 }
