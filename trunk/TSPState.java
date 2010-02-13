@@ -42,7 +42,7 @@ public class TSPState {
 
 	}
 
-		
+
 	public long getLowerBound() { return optimalCost; };
 	public long[][] matrix() { return matrix; }
 
@@ -156,22 +156,23 @@ public class TSPState {
 				newRow[c] = rowMap[c];
 			}
 		}
-		
-		boolean columnExists = false;
-		boolean rowExists = false;
-		
+
+		int columnExists = -1;
+		int rowExists = -1;
+
 		for(int i=0; i< newCol.length; i++) {
 			if (newCol[i] == x) {
-				columnExists = true;
+				columnExists = i;
+				
 			}
 			if(newRow[i] == y) {
-				rowExists = true;
+				rowExists = i;
 			}
 		}
-		if(columnExists && rowExists) {
-			newmatrix[y][x] = Long.MAX_VALUE;
+		if(columnExists >= 0 && rowExists >= 0) {
+			newmatrix[rowExists][columnExists] = Long.MAX_VALUE;
 		}
-		
+
 		return new TSPState(newmatrix, this, newCol, newRow, size);
 	}
 
@@ -191,18 +192,52 @@ public class TSPState {
 	}
 
 	/*
-	 * This very ugly function calculates the coordinate where setting it to
-	 * infinity will result in the largest increase in lower bound
+	 * Find the ZERO that when set to infinity, allows the most to
+	 * be reduced from its row and column.
 	 */
 	public final int[] bestCoord() {
-		printMatrix();
 		if(nextBest != null) return nextBest;
-		int[] retVal = new int[2];
+		long largestSoFar = 0;
+		int[] retVal = new int[2]; // X, Y
+		for(int x = 0; x < matrix.length; x++) {
+			for(int y = 0; y < matrix.length; y++) {
+				if(matrix[x][y] == 0 ) {
+					long reduction = 
+						getNextLowestRowValue(matrix[x], y) 
+						+ getNextLowestColumnValue(matrix, y, x);
+					
+					if( reduction >= largestSoFar) {
+						retVal[0] = x;
+						retVal[1] = y;
+						largestSoFar = reduction;
+					}
+				}
+			}
+		}
 		
 		System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
 		return retVal;
 	}
-	
+
+	private long getNextLowestRowValue(long[] row, int index) {
+		long lowest = Long.MAX_VALUE;
+		for(int i=0; i<row.length; i++) {
+			if(row[i] < lowest && i != index) {
+				lowest = row[i];
+			}
+		}
+		return lowest;
+	}
+
+	private long getNextLowestColumnValue(long[][] array, int columnIndex, int elementIndex) {
+		long lowest = Long.MAX_VALUE;
+		for(int i=0; i<array.length; i++) {
+			if(array[i][columnIndex] < lowest && i != elementIndex) {
+				lowest = array[i][columnIndex];
+			}
+		}
+		return lowest;
+	}
 	/*
 	 * Print the state with labels reflecting ORIGINAL VALUES!
 	 */
@@ -226,5 +261,5 @@ public class TSPState {
 			System.out.println("\n");
 		}
 	}
-	
+
 }
