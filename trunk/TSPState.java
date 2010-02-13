@@ -71,6 +71,7 @@ public class TSPState {
 			traversal = traversal.parent;
 			x++;
 		}
+		System.out.println("Printing best route:");
 		for(int c = 0; c < pathX.length; c++) {
 			System.out.println(pathX[c] + ", " + pathY[c]);
 		}
@@ -119,12 +120,15 @@ public class TSPState {
 			// And add it to the lower bound.
 			lower_bound = lower_bound + min;
 		}
+		printMatrix();
 		return lower_bound;
 	}
 	/*
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
 	public final TSPState leftSplit() {
+		System.out.println("Splitting Left");
+		
 		int x = nextBest[0];
 		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
@@ -143,13 +147,13 @@ public class TSPState {
 		int[] newCol = new int[matrix.length-1];
 		int[] newRow = new int[matrix.length-1];
 		for (int c = 0; c < matrix.length-1; c++) {
-			if(c >= x){
+			if(c >= y){
 				System.out.println("Map col " + c + " to " + columnMap[c+1]);
 				newCol[c] = columnMap[c+1];
 			}else{
 				newCol[c] = columnMap[c];
 			}
-			if(c >= y){
+			if(c >= x){
 				System.out.println("Map row " + c + " to " + rowMap[c+1]);
 				newRow[c] = rowMap[c+1];
 			}else{
@@ -161,13 +165,13 @@ public class TSPState {
 		int rowExists = -1;
 
 		for(int i=0; i< newCol.length; i++) {
-			if (newCol[i] == x) {
-				columnExists = i;
-				
-			}
 			if(newRow[i] == y) {
 				rowExists = i;
 			}
+			if (newCol[i] == x) {
+				columnExists = i;
+			}
+			
 		}
 		if(columnExists >= 0 && rowExists >= 0) {
 			newmatrix[rowExists][columnExists] = Long.MAX_VALUE;
@@ -180,6 +184,7 @@ public class TSPState {
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
 	public final TSPState rightSplit() {
+		System.out.println("Splitting right");
 		int x = nextBest[0];
 		int y = nextBest[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
@@ -193,15 +198,20 @@ public class TSPState {
 
 	/*
 	 * Find the ZERO that when set to infinity, allows the most to
-	 * be reduced from its row and column.
+	 * be reduced from its row and column. AKA find the element that,
+	 * when ignored, results in the largest minimum element of row +
+	 * minimum element of column.
 	 */
 	public final int[] bestCoord() {
 		if(nextBest != null) return nextBest;
 		long largestSoFar = 0;
 		int[] retVal = new int[2]; // X, Y
+		// For each element of the array
 		for(int x = 0; x < matrix.length; x++) {
 			for(int y = 0; y < matrix.length; y++) {
+				// If this element is zero
 				if(matrix[x][y] == 0 ) {
+					// add the next lowest row value and the next lowest column value.
 					long reduction = 
 						getNextLowestRowValue(matrix[x], y) 
 						+ getNextLowestColumnValue(matrix, y, x);
@@ -214,12 +224,12 @@ public class TSPState {
 				}
 			}
 		}
-		
+		// Return the lowest sum
 		System.out.println("Best coordinates are:" + retVal[0] + "," + retVal[1]);
 		return retVal;
 	}
 
-	private long getNextLowestRowValue(long[] row, int index) {
+	private final long getNextLowestRowValue(long[] row, int index) {
 		long lowest = Long.MAX_VALUE;
 		for(int i=0; i<row.length; i++) {
 			if(row[i] < lowest && i != index) {
@@ -229,7 +239,7 @@ public class TSPState {
 		return lowest;
 	}
 
-	private long getNextLowestColumnValue(long[][] array, int columnIndex, int elementIndex) {
+	private final long getNextLowestColumnValue(long[][] array, int columnIndex, int elementIndex) {
 		long lowest = Long.MAX_VALUE;
 		for(int i=0; i<array.length; i++) {
 			if(array[i][columnIndex] < lowest && i != elementIndex) {
@@ -241,7 +251,7 @@ public class TSPState {
 	/*
 	 * Print the state with labels reflecting ORIGINAL VALUES!
 	 */
-	public void printMatrix () {
+	public final void printMatrix () {
 		System.out.println("With proper headers:");
 		System.out.println("Adjacency matrix of graph weights:\n");
 		System.out.print("\t");
