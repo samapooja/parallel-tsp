@@ -48,7 +48,7 @@ public class OptimalTSP {
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
 		leftStack.push(startState.leftSplit());
-		rightStack.push(startState.rightSplit());
+		//rightStack.push(startState.rightSplit());
 		run();
 	}
 
