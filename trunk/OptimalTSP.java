@@ -8,7 +8,7 @@ import java.util.Stack;
 public class OptimalTSP {
 	long[][] weightMatrix;
 	int[] optimalPath;
-	long optimalCost;
+	long optimalCost = Long.MAX_VALUE;
 	int max_depth = 8;
 	Stack<TSPState> rightStack;
 	Stack<TSPState> leftStack;
@@ -50,11 +50,12 @@ public class OptimalTSP {
 		OptimalTSP.reduce(startMatrix);
 		OptimalTSP.printMatrix(startMatrix);
 		TSPState startState = new TSPState(startMatrix, null);
-		leftStack.push(startState.leftSplit());
+		int[] best = startState.bestCoord();
+		leftStack.push(startState.leftSplit(best));
 		OptimalTSP.printMatrix(leftStack.peek().matrix());
-		rightStack.push(startState.rightSplit());
+		rightStack.push(startState.rightSplit(best));
 		OptimalTSP.printMatrix(rightStack.peek().matrix());
-		// run();
+		//run();
 
 	}
 
@@ -77,8 +78,9 @@ public class OptimalTSP {
 				if ( OptimalTSP.reduce(state.matrix()) > optimalCost ) {
 					// Continuing down this path is worthless. Do nothing
 				} else {
-					leftStack.push(state.leftSplit());
-					rightStack.push(state.rightSplit());
+					int[] best = state.bestCoord();
+					leftStack.push(state.leftSplit(best));
+					rightStack.push(state.rightSplit(best));
 				}
 			}
 		}
