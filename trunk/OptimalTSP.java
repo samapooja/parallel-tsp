@@ -49,11 +49,22 @@ public class OptimalTSP {
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
 		OptimalTSP.printMatrix(startState.matrix());
+		
 		int[] best = startState.bestCoord();
 		leftStack.push(startState.leftSplit(best));
-		OptimalTSP.printMatrix(leftStack.peek().matrix());
 		rightStack.push(startState.rightSplit(best));
-		OptimalTSP.printMatrix(rightStack.peek().matrix());
+		int[] path = leftStack.peek().getPath();
+		OptimalTSP.printMatrix(leftStack.peek().matrix());
+		
+		best = leftStack.peek().bestCoord();
+		leftStack.push(leftStack.peek().leftSplit(best));
+		path = leftStack.peek().getPath();
+		
+		OptimalTSP.printMatrix(leftStack.peek().matrix());
+		
+		best = leftStack.peek().bestCoord();
+		leftStack.push(leftStack.peek().leftSplit(best));
+		path = leftStack.peek().getPath();
 		//run();
 
 	}

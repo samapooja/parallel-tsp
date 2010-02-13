@@ -3,17 +3,43 @@ public class TSPState {
 	private final int[] nextBest;
 	private final long[][] matrix;
 	private final TSPState parent;
+	private final int[] columnMap;
+	private final int[] rowMap;
+	private int size;
 	private long optimalCost;
+
 	public TSPState(long[][] weightMatrix, TSPState parent) {
 		this.matrix = weightMatrix;
+		this.size = weightMatrix.length;
 		this.nextBest = bestCoord();
 		this.parent = parent;
+		this.columnMap = new int[weightMatrix.length];
+		this.rowMap = new int[weightMatrix.length];
+		for(int x = 0; x < weightMatrix.length; x++) {
+			this.columnMap[x] = x;
+			this.rowMap[x] = x;
+		}
 		if(parent != null) {
 			optimalCost = parent.optimalCost + reduce();
 		} else {
 			optimalCost = reduce();
 		}
 	}
+
+	public TSPState(long[][] weightMatrix, TSPState parent, int[] columnMap, int[] rowMap, int size) {
+		this.matrix = weightMatrix;
+		this.nextBest = bestCoord();
+		this.parent = parent;
+		this.rowMap = rowMap;
+		this.columnMap = columnMap;
+		this.size = size;
+		if(parent != null) {
+			optimalCost = parent.optimalCost + reduce();
+		} else {
+			optimalCost = reduce();
+		}
+	}
+
 		
 	public long getLowerBound() { return optimalCost; };
 	public long[][] matrix() { return matrix; }
@@ -33,8 +59,19 @@ public class TSPState {
 	 * @return
 	 */
 	public int[] getPath() {
-		TSPState traversal = this;
-
+		int[] pathX = new int[size+1];
+		int[] pathY = new int[size+1];
+		TSPState traversal = this.parent;
+		int x = 0;
+		while(traversal != null) {
+			pathX[x] = traversal.rowMap[traversal.bestCoord()[0]];
+			pathY[x] = traversal.columnMap[traversal.bestCoord()[1]];
+			traversal = traversal.parent;
+			x++;
+		}
+		for(int c = 0; c < pathX.length; c++) {
+			System.out.println(pathX[c] + ", " + pathY[c]);
+		}
 		return new int[matrix.length];
 	}
 
@@ -91,6 +128,7 @@ public class TSPState {
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
 		int offset = 0;
 		for(int c = 0; c < matrix.length; c++) {
+			// skip x
 			if(c == x) {
 				offset = 1;
 				continue;
@@ -100,8 +138,25 @@ public class TSPState {
 				System.arraycopy(matrix[c], y+1, newmatrix[c-offset], y, matrix[c].length - y - 1);
 			}
 		}
+		int[] newCol = new int[matrix.length-1];
+		int[] newRow = new int[matrix.length-1];
+		for (int c = 0; c < matrix.length-1; c++) {
+			if(c >= x){
+				System.out.println("Map col " + c + " to " + columnMap[c+1]);
+				newCol[c] = columnMap[c+1];
+			}else{
+				newCol[c] = columnMap[c];
+			}
+			if(c >= y){
+				System.out.println("Map row " + c + " to " + rowMap[c+1]);
+				newRow[c] = rowMap[c+1];
+			}else{
+				newRow[c] = rowMap[c];
+			}
+		}
+
 		newmatrix[y][x] = Long.MAX_VALUE;
-		return new TSPState(newmatrix, this);
+		return new TSPState(newmatrix, this, newCol, newRow, size);
 	}
 
 	/*
@@ -116,7 +171,7 @@ public class TSPState {
 		}
 		newmatrix[x][y] = Long.MAX_VALUE;
 		newmatrix[y][x] = Long.MAX_VALUE;
-		return new TSPState(newmatrix, this);
+		return new TSPState(newmatrix, this, columnMap, rowMap, size);
 	}
 
 	/*
