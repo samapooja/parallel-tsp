@@ -48,14 +48,12 @@ public class TSPState {
 	public long getLowerBound() { return optimalCost; };
 	public long[][] matrix() { return matrix; }
 
-	// FAKE METHODS NEED IMPLEMENTATION!
-	// 
 	/**
 	 * Check if this array represents a final state,
 	 * a state that cannot be divided anymore, i.e. has only one path remaining.
 	 */
 	public boolean isFinalState() {
-		return (matrix.length < 1);
+		return (matrix.length < 1 || matrix[0].length < 1);
 	}
 	/**
 	 * This is a terminal node with only one path remaining.
@@ -65,17 +63,23 @@ public class TSPState {
 	public HashMap<Integer, Integer> getPath() {
 		HashMap<Integer, Integer> path = new HashMap<Integer, Integer>(size);
 		TSPState traversal = this.parent;
-		while(traversal != null) {
+		int counter = size;
+		while(traversal != null && counter > 0) {
 			path.put(traversal.theBest[0], traversal.theBest[1]);
-//			System.out.println("PUT: " + traversal.theBest[0] + "," + traversal.theBest[1]);
+			//System.out.println("PUT: " + traversal.theBest[0] + "," + traversal.theBest[1]);
 			traversal = traversal.parent;
+			// There seems to be a problem here! Counters to stop infinite output
+			counter --;
 		}
 		System.out.println("Printing best route:");
 		int index = 0;
+		// Counter only exists to stop incorrect cycles, like the ones produced from bad 
+		counter = path.size();
 		do {
 			System.out.print(index + " , ");
 			index = path.get(index);
-		} while (index != 0);
+			counter--;
+		} while (index != 0 && counter > 0);
 		System.out.println(0);
 		return path;
 	}
@@ -204,6 +208,8 @@ public class TSPState {
 	public final void fixNextBest() {
 		theBest[0] = rowMap[nextBest[0]];
 		theBest[1] = columnMap[nextBest[1]];
+		System.out.println("Branching at: " + theBest[0] + " , " + theBest[1]);
+
 	}
 
 	/*
@@ -239,6 +245,7 @@ public class TSPState {
 		return retVal;
 	}
 
+	// Helpers for bestCoord().
 	private final long getNextLowestRowValue(long[] row, int index) {
 		long lowest = Long.MAX_VALUE;
 		for(int i=0; i<row.length; i++) {
