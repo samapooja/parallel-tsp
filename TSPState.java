@@ -33,9 +33,9 @@ public class TSPState {
 	/*
 	 * Calculate the resulting weighted graph after a left split at coords x, y
 	 */
-	public final TSPState leftSplit() {
-		int x = bestCoord()[0];
-		int y = bestCoord()[1];
+	public final TSPState leftSplit(int[] best) {
+		int x = best[0];
+		int y = best[1];
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
 		int offset = 0;
 		for(int c = 0; c < matrix.length; c++) {
@@ -56,9 +56,9 @@ public class TSPState {
 	/*
 	 * Calculate the resulting weighted graph after a right split at coords x, y
 	 */
-	public final TSPState rightSplit() {
-		int x = bestCoord()[0];
-		int y = bestCoord()[1];
+	public final TSPState rightSplit(int[] best) {
+		int x = best[0];
+		int y = best[1];
 		long[][] newmatrix = new long[matrix.length][matrix.length];
 		for(int c = 0; c < matrix.length; c++) {
 			System.arraycopy(matrix[c], 0, newmatrix[c], 0, matrix[c].length);
