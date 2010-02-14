@@ -1,12 +1,9 @@
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.Stack;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import edu.rit.pj.Comm;
 import edu.rit.pj.ParallelRegion;
@@ -32,7 +29,7 @@ public class OptimalTSPSMP {
 
 
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 
 		long start = System.currentTimeMillis();
 		if(args.length != 1) {
@@ -48,7 +45,9 @@ public class OptimalTSPSMP {
 			System.exit(0);
 		}
 
-		OptimalTSP solver = new OptimalTSP(theGraph);
+		OptimalTSPSMP solver = new OptimalTSPSMP(theGraph);
+		System.out.println("Starting Solver");
+
 		solver.start();
 
 		long stop = System.currentTimeMillis();
@@ -89,18 +88,21 @@ public class OptimalTSPSMP {
 	public void run() throws Exception {
 		new ParallelTeam().execute (new ParallelRegion() {
 			SortedMap<Long, TSPState> leftStack;
-			SortedMap<Long, TSPState> rightStack;
 			TSPState state;
+			Set<Long> keys;
 
 			public void start() {
 				synchronized(sharedStack) {
 					state = sharedStack.remove(sharedStack.firstKey());
 					leftStack.put(state.getLowerBound(), state);
+					keys = sharedStack.keySet();
 				}
+				System.out.println("sharedStackSize:" + keys.size());
+
 			}
 
-			public void run() throws Exception {					
-				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
+			public void run() throws Exception {	
+ 				while(!leftStack.isEmpty() || !keys.isEmpty() ) {
 					if(!leftStack.isEmpty()) {
 						state = leftStack.get(leftStack.firstKey());
 					} else {
