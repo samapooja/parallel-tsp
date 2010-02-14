@@ -77,12 +77,25 @@ public class OptimalTSPSMP {
 		TSPState startState = new TSPState(startMatrix, null);
 
 		for(int i = 0 ; i <= 8; i++) {
-			TSPState left = startState.leftSplit();
-			TSPState right = startState.rightSplit();
-			sharedStack.put(right.getLowerBound(), right);
-			startState = left;
+			if( startState != null && !startState.isFinalState() ) {
+				TSPState left = startState.leftSplit();
+				TSPState right = startState.rightSplit();
+				
+				long lowerBound = right.getLowerBound();
+				while(sharedStack.containsKey(lowerBound)) {
+					lowerBound++;
+				}
+				sharedStack.put(lowerBound, right);
+				startState = left;
+			} else {
+				break;
+			}
 		}
-		sharedStack.put(startState.getLowerBound(), startState);
+		long lowerBound = startState.getLowerBound();
+		while(sharedStack.containsKey(lowerBound)) {
+			lowerBound++;
+		}
+		sharedStack.put(lowerBound, startState);
 		run(); 
 	}
 
@@ -92,10 +105,11 @@ public class OptimalTSPSMP {
 			public void run() throws Exception {
 				TreeMap<Long, TSPState> leftStack = new TreeMap<Long, TSPState>();
 				TSPState state;
-
 				synchronized(sharedStack) {
-					state = sharedStack.remove(sharedStack.firstKey());
-					leftStack.put(state.getLowerBound(), state);
+					if(!sharedStack.isEmpty()) {
+						state = sharedStack.remove(sharedStack.firstKey());
+						leftStack.put(state.getLowerBound(), state);
+					}
 				}
 
 				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
@@ -111,6 +125,7 @@ public class OptimalTSPSMP {
 						}
 					}
 
+
 					if( state != null && state.isFinalState() ) {
 						HashMap<Integer, Integer> thisPath = state.getPath();
 						long thisCost = getCost(thisPath);
@@ -125,7 +140,11 @@ public class OptimalTSPSMP {
 							TSPState right = state.rightSplit();
 							if(right != null) {
 								synchronized(sharedStack) {
-									sharedStack.put(right.getLowerBound(), right);
+									long lowerBound = right.getLowerBound();
+									while(sharedStack.containsKey(lowerBound)) {
+										lowerBound++;
+									}
+									sharedStack.put(lowerBound, right);
 								}
 							}
 						}
@@ -183,6 +202,7 @@ public class OptimalTSPSMP {
 
 		if(count < path.size())
 			return Long.MAX_VALUE;
+
 		return distance;
 	}
 
