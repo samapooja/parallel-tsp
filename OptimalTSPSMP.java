@@ -1,232 +1,185 @@
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.Stack;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import edu.rit.pj.Comm;
-import edu.rit.pj.IntegerForLoop;
 import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.ParallelTeam;
-import edu.rit.pj.reduction.ObjectOp;
+import edu.rit.pj.reduction.SharedLong;
 import edu.rit.pj.reduction.SharedObject;
-
 /**
  * This class implements a brute force search
  * for the traveling salesman problem
  *
  * @author   Robert Clark
- * @author   Daniel Iland
  */
 public class OptimalTSPSMP {
-	static long[][] graphMatrix;
-	static int[] optimalPath;
-	static long optimalCost;
-	static int max_depth = 8;
-	static long[] matrixMins;
-	static long[] matrixMins2;
-	static SharedObject<Stack<SearchState>> sharedStack = new SharedObject<Stack<SearchState>>();
-	static ObjectOp <Stack<SearchState>> combineStacks = new ObjectOp<Stack<SearchState>>() {
-
-		public Stack<SearchState> op(Stack<SearchState> x,
-				Stack<SearchState> y) {
-			Stack<SearchState> returnVal = new Stack<SearchState>();
-			returnVal.addAll(x);
-			returnVal.addAll(y);
-			return returnVal;
-		}
-	};
+	long[][] staticMatrix;
+	long[][] weightMatrix;
+	SharedObject<HashMap<Integer, Integer>> optimalPath = new SharedObject<HashMap<Integer, Integer>>();
+	SharedLong optimalCost = new SharedLong(Long.MAX_VALUE);
+	Stack<TSPState> rightStack;
+	Stack<TSPState> leftStack;
+	SortedMap<Long, TSPState> sharedStack;
 
 
-	public static void main(String[] args) throws Exception {
+
+
+
+	public static void main(String[] args) {
+
 		long start = System.currentTimeMillis();
-		Comm.init(args);
-
-		if(args.length != 2) {
-			System.err.println("Usage: OptimalTSP inputFile branchDepth");
-			System.exit(-1);
+		if(args.length != 1) {
+			System.err.println("Usage: OptimalTSP graphFile");
+			System.exit(0);
 		}
-		int depth = Integer.parseInt(args[1]);
+
 		Graph theGraph = new Graph();
 		try {
 			theGraph.loadMatrix(args[0]);
 		} catch(Exception e) {
-			System.out.println("Unable to load matrix, check filename");
+			System.out.println("Unable to load matrix");
 			System.exit(0);
 		}
-		
-		graphMatrix = theGraph.getMatrix();
-		optimalCost = Long.MAX_VALUE;
-		if(graphMatrix.length <= depth)
-			max_depth = graphMatrix.length - 1;
-		else
-			max_depth = depth;
-		
-		genMatrixMins();
-		
-		branch();
 
-		System.out.println();
-		displayOptimal();
+		OptimalTSP solver = new OptimalTSP(theGraph);
+		solver.start();
+
 		long stop = System.currentTimeMillis();
 		System.out.println("Runtime for optimal TSP   : " + (stop-start) + " milliseconds");
 		System.out.println();
 	}
 
-	/**
-	 * Generates an array of all nodes
-	 **/
-	public static int[] nodeList() {
-		int[] nodes = new int[graphMatrix.length-1];
-		for(int x = 1; x < graphMatrix.length; x++) {
-			nodes[x-1] = x;
-		}
-		return nodes;
-	}
+	OptimalTSPSMP(Graph inputGraph) {
+		weightMatrix = inputGraph.getMatrix();
+		int length = weightMatrix.length;
 
-	/**
-	 * Print out the current optimal path
-	 **/
-	public static void displayOptimal() {
-		System.out.print("Optimal distance: " + optimalCost);
-		System.out.print(" for path ");
-		for(int x = 0; x < optimalPath.length; x++) {
-			System.out.print(optimalPath[x] + " ");
-		}
-		System.out.println("0");
-	}
-
-	public static long testPath(int[] testPath) {
-		long cost = 0;
-		int x = 0;
-
-		for(x = 0; x < (testPath.length-1); x++) {
-			cost += graphMatrix[testPath[x]][testPath[x+1]];
-			if(cost >= optimalCost) {
-				return 0;
+		staticMatrix = new long[length][length];
+		inputGraph.printMatrix();
+		for(int i=0; i< length; i++ ) {
+			for(int j=0; j< length; j++ ) {
+				staticMatrix[i][j] = weightMatrix[i][j];
 			}
 		}
-		cost += graphMatrix[testPath[x]][0];
-		
-		if(cost < optimalCost) {
-			optimalPath = testPath;
-			optimalCost = cost;
+		sharedStack = Collections.synchronizedSortedMap(new TreeMap<Long, TSPState>()); 
+
+	}
+
+	public void start() throws Exception {
+		long[][] startMatrix = new long[weightMatrix.length][weightMatrix.length];
+		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
+		TSPState startState = new TSPState(startMatrix, null);
+
+		for(int i = 0 ; i < Comm.world().size(); i++) {
+			TSPState left = startState.leftSplit();
+			TSPState right = startState.rightSplit();
+			sharedStack.put(right.getLowerBound(), right);
+			startState = left;
 		}
-		return cost;
+		sharedStack.put(startState.getLowerBound(), startState);
+		run(); 
 	}
 
-	/**
-	 * Recursively branches until it reaches the max_depth
-	 * it then binds and calculates the shortest path cost
-	 * at the specified branch.
-	 * @throws Exception 
-	 **/
-	public static void branch() throws Exception {
-		ParallelTeam team = new ParallelTeam();
-		SearchState start_state = new SearchState(nodeList(), graphMatrix);
-		Stack<SearchState> stack = new Stack<SearchState>();
-		stack.add(start_state);
-		sharedStack.set(stack);
-				while(!sharedStack.get().isEmpty()) {
-			SearchState cur_state = sharedStack.get().pop();
-			// depth reaches the maximum, stop branching
-			if(cur_state.depth > max_depth) {
-				int[] new_path = cur_state.pathAndPool();
-				bind(new_path, cur_state.depth);
-			} else {
-				team.execute( getRegion(cur_state.freeCount()-1, cur_state) );
-			}
-		}
-	}
+	public void run() throws Exception {
+		new ParallelTeam().execute (new ParallelRegion() {
+			SortedMap<Long, TSPState> leftStack;
+			SortedMap<Long, TSPState> rightStack;
+			TSPState state;
 
-	public static ParallelRegion getRegion( int count, SearchState state) {
-		final int freeCount = count;
-		final SearchState cur_state = state;
-		
-		
-		ParallelRegion region = new ParallelRegion() {
-
-			public void run() throws Exception {
-				
-				execute(0, freeCount, new IntegerForLoop() {
-					Stack<SearchState> states;
-
-					public void start() {
-						states = new Stack<SearchState>();
-					}
-					public void run(int first, int last) throws Exception {
-						// TODO Auto-generated method stub
-						for(int x = first; x <= last; ++x) {
-							SearchState new_state = cur_state.genNextState(x);
-							long heuristic = calcHeuristic(new_state);
-							if(heuristic < optimalCost) {
-								states.push(new_state);
-							}
-						}
-					}
-					public void finish() {
-						sharedStack.reduce(states, combineStacks);
-					}
-				});
-			}	
-		};
-		
-		return region;
-	}
-	public static long calcHeuristic(SearchState state) {
-		// calculate heuristic
-		long heuristic_val = 0;
-		for(int x : state.getFreeNodes()) {
-			heuristic_val += matrixMins[x];
-			heuristic_val += matrixMins2[x];
-		}
-		heuristic_val = heuristic_val / 2;
-		heuristic_val += matrixMins[0];
-		heuristic_val += state.cost;
-		return heuristic_val;
-	}
-	
-	/**
-	 * This method generates the matrix minimum values for each row
-	 **/
-	public static void genMatrixMins() {
-		matrixMins = new long[graphMatrix.length];
-		matrixMins2 = new long[graphMatrix.length];
-		for(int index = 0; index < graphMatrix.length; index++) {
-			long minVal = 0;
-			if(index == 0) {
-				minVal = graphMatrix[index][1];
-			} else {
-				minVal = graphMatrix[index][0];
-			}
-			long minVal2 = minVal;
-			for(int x = 0; x < graphMatrix[index].length; x++) {
-				if(x != index && graphMatrix[index][x] < minVal) {
-					minVal2 = minVal;
-					minVal = graphMatrix[index][x];
-				} else if(x != index && graphMatrix[index][x] < minVal2) {
-					minVal2 = graphMatrix[index][x];
+			public void start() {
+				synchronized(sharedStack) {
+					state = sharedStack.remove(sharedStack.firstKey());
+					leftStack.put(state.getLowerBound(), state);
 				}
 			}
-			matrixMins[index] = minVal;
-			matrixMins2[index] = minVal2;
-		}
+
+			public void run() throws Exception {					
+				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
+					if(!leftStack.isEmpty()) {
+						state = leftStack.get(leftStack.firstKey());
+					} else {
+						synchronized(sharedStack) {
+							state = sharedStack.get(sharedStack.firstKey());
+						}
+					}
+					if( state.isFinalState() ) {
+						HashMap<Integer, Integer> thisPath = state.getPath();
+						long thisCost = getCost(thisPath);
+						if( ( thisPath.size() >= staticMatrix.length ) && ( thisCost < optimalCost.get() ) ) {
+							optimalCost.set(thisCost);
+							optimalPath.set(thisPath);
+						}
+					} else {
+						if ( state.getLowerBound() < optimalCost.get() ) {
+							TSPState left = state.leftSplit();
+							leftStack.put(left.getLowerBound(), left);
+							TSPState right = state.rightSplit();
+							if(right != null)
+								synchronized(sharedStack) {
+									sharedStack.put(right.getLowerBound(), right);
+								}
+						}
+					}
+				}
+			}
+		});
+
+
+		System.out.println("The shortest cycle is of distance " + optimalCost);
+		TSPState.printPath(optimalPath.get());
 	}
 
 
-	public static void bind(int[] input, int offset) {
-		if(input.length - offset <= 1) {
-			int[] output = new int[input.length];
-			System.arraycopy(input, 0, output,0,input.length);
-			testPath(output);
-			return;
-		}
-		int x = input[offset];
-		for(int i = offset; i<input.length; i++) {
-			int y = input[i];
-			input[i] = x;
-			input[offset] = y;
 
-			bind(input, offset+1);
-			input[i] = y;
+	/*
+	 * simply print a matrix
+	 */
+	public static void printMatrix (long[][] matrix) {
+		System.out.println("Adjacency matrix of graph weights:\n");
+		System.out.print("\t");
+		for(int x = 0; x < matrix.length; x++) 
+			System.out.print(x + "\t");
+
+		System.out.println("\n");
+		for(int x = 0; x < matrix.length; x++){
+			System.out.print(x + "\t");
+			for(int y = 0; y < matrix[x].length; y++) {
+				if(matrix[x][y] > Long.MAX_VALUE - 10000) {
+					System.out.print("Inf\t");
+				}else{
+					System.out.print(matrix[x][y] + "\t");
+				}
+			}
+			System.out.println("\n");
 		}
-		input[offset] = x;
+	}
+
+	/** 
+	 * Returns the length to complete a cycle in the order specified.
+	 */
+	public long getCost(HashMap<Integer, Integer> path) {
+		long distance = 0;
+		int start = 0;
+		int end = 0;
+		int count = 0;
+		do {
+			if(!path.containsKey(start))
+				return Long.MAX_VALUE;
+			end = path.get(start);
+			distance = distance + staticMatrix[start][end];
+			start = end;
+			count++;
+		} while (start != 0);
+
+		if(count < path.size())
+			return Long.MAX_VALUE;
+		return distance;
 	}
 
 }
