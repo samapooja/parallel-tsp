@@ -95,14 +95,12 @@ public class OptimalTSPSMP {
 				synchronized(sharedStack) {
 					state = sharedStack.remove(sharedStack.firstKey());
 					leftStack.put(state.getLowerBound(), state);
-					keys = sharedStack.keySet();
+					System.out.println("sharedStackSize:" + sharedStack.size());
 				}
-				System.out.println("sharedStackSize:" + keys.size());
-
 			}
 
 			public void run() throws Exception {	
- 				while(!leftStack.isEmpty() || !keys.isEmpty() ) {
+ 				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
 					if(!leftStack.isEmpty()) {
 						state = leftStack.get(leftStack.firstKey());
 					} else {
