@@ -32,6 +32,7 @@ public class OptimalTSPSMP {
 	public static void main(String[] args) throws Exception {
 
 		long start = System.currentTimeMillis();
+		Comm.init(args);
 		if(args.length != 1) {
 			System.err.println("Usage: OptimalTSP graphFile");
 			System.exit(0);
@@ -75,7 +76,7 @@ public class OptimalTSPSMP {
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
 
-		for(int i = 0 ; i < Comm.world().size(); i++) {
+		for(int i = 0 ; i <= 8; i++) {
 			TSPState left = startState.leftSplit();
 			TSPState right = startState.rightSplit();
 			sharedStack.put(right.getLowerBound(), right);
@@ -87,43 +88,46 @@ public class OptimalTSPSMP {
 
 	public void run() throws Exception {
 		new ParallelTeam().execute (new ParallelRegion() {
-			SortedMap<Long, TSPState> leftStack;
-			TSPState state;
-			Set<Long> keys;
 
-			public void start() {
+			public void run() throws Exception {
+				TreeMap<Long, TSPState> leftStack = new TreeMap<Long, TSPState>();
+				TSPState state;
+
 				synchronized(sharedStack) {
 					state = sharedStack.remove(sharedStack.firstKey());
 					leftStack.put(state.getLowerBound(), state);
-					System.out.println("sharedStackSize:" + sharedStack.size());
 				}
-			}
 
-			public void run() throws Exception {	
- 				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
+				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
 					if(!leftStack.isEmpty()) {
-						state = leftStack.get(leftStack.firstKey());
+						state = leftStack.remove(leftStack.firstKey());
 					} else {
 						synchronized(sharedStack) {
-							state = sharedStack.get(sharedStack.firstKey());
+							if(!sharedStack.isEmpty()) {
+								state = sharedStack.remove(sharedStack.firstKey());
+							} else {
+								state = null;
+							}
 						}
 					}
-					if( state.isFinalState() ) {
+
+					if( state != null && state.isFinalState() ) {
 						HashMap<Integer, Integer> thisPath = state.getPath();
 						long thisCost = getCost(thisPath);
 						if( ( thisPath.size() >= staticMatrix.length ) && ( thisCost < optimalCost.get() ) ) {
 							optimalCost.set(thisCost);
 							optimalPath.set(thisPath);
 						}
-					} else {
+					} else if (state != null ){
 						if ( state.getLowerBound() < optimalCost.get() ) {
 							TSPState left = state.leftSplit();
 							leftStack.put(left.getLowerBound(), left);
 							TSPState right = state.rightSplit();
-							if(right != null)
+							if(right != null) {
 								synchronized(sharedStack) {
 									sharedStack.put(right.getLowerBound(), right);
 								}
+							}
 						}
 					}
 				}
