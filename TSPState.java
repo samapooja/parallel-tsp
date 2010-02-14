@@ -148,6 +148,7 @@ public class TSPState {
 		int x = nextBest[0];
 		int y = nextBest[1];
 
+
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
 
 		int offset = 0;
@@ -209,10 +210,12 @@ public class TSPState {
 		// at later.
 		fixNextBest();
 		TSPState newState = new TSPState(newmatrix, this, columnMap, rowMap, size);
-
+		
+		/*
 		if(newState.optimalCost == Long.MAX_VALUE) {
 			return null;
 		}
+		*/
 
 		return newState;
 	}
