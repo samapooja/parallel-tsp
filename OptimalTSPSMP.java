@@ -7,6 +7,7 @@ import java.util.TreeMap;
 import edu.rit.pj.Comm;
 import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.ParallelTeam;
+import edu.rit.pj.reduction.SharedBoolean;
 import edu.rit.pj.reduction.SharedLong;
 import edu.rit.pj.reduction.SharedObject;
 /**
@@ -27,6 +28,7 @@ public class OptimalTSPSMP {
 	Stack<TSPState> rightStack;
 	Stack<TSPState> leftStack;
 	SortedMap<Long, TSPState> sharedStack;
+	SharedBoolean needMoreStates = new SharedBoolean(false);
 
 	/**
 	 * Constructs an OptimalTSPSMP solver object containing the Graph
@@ -133,7 +135,11 @@ public class OptimalTSPSMP {
 
 			public void run() throws Exception {
 				TreeMap<Long, TSPState> leftStack = new TreeMap<Long, TSPState>();
-				TSPState state;
+				TreeMap<Long, TSPState> rightStack = new TreeMap<Long, TSPState>();
+
+				TSPState state = null;
+				int sharedStackCounter = 0;
+
 				synchronized(sharedStack) {
 					if(!sharedStack.isEmpty()) {
 						state = sharedStack.remove(sharedStack.firstKey());
@@ -141,17 +147,11 @@ public class OptimalTSPSMP {
 					}
 				}
 
-				while(!leftStack.isEmpty() || !sharedStack.isEmpty() ) {
+				while(!leftStack.isEmpty() || !rightStack.isEmpty() ) {
 					if(!leftStack.isEmpty()) {
 						state = leftStack.remove(leftStack.firstKey());
-					} else {
-						synchronized(sharedStack) {
-							if(!sharedStack.isEmpty()) {
-								state = sharedStack.remove(sharedStack.firstKey());
-							} else {
-								state = null;
-							}
-						}
+					} else if (!rightStack.isEmpty()) {
+						state = rightStack.remove(rightStack.firstKey());
 					}
 
 					if( state != null && state.isFinalState() ) {
@@ -167,13 +167,31 @@ public class OptimalTSPSMP {
 							leftStack.put(left.getLowerBound(), left);
 							TSPState right = state.rightSplit();
 							if(right != null) {
-								synchronized(sharedStack) {
+								if(needMoreStates.equals(true)) {
+									sharedStack.put(right.getLowerBound(), right);
+									needMoreStates.set(false);
+								} else {
 									long lowerBound = right.getLowerBound();
-									while(sharedStack.containsKey(lowerBound)) {
+									while(rightStack.containsKey(lowerBound)) {
 										lowerBound++;
 									}
-									sharedStack.put(lowerBound, right);
+									rightStack.put(lowerBound, right);
 								}
+							}
+						}
+					}
+					if(leftStack.isEmpty() && rightStack.isEmpty()) {
+						needMoreStates.set(true);
+						while(needMoreStates.equals(true)) { }
+						synchronized(sharedStack) {
+							if(!sharedStack.isEmpty()) {
+								state = sharedStack.remove(
+										sharedStack.firstKey());
+							} else {
+								state = null;
+							}
+							if( state != null ) {
+								leftStack.put( state.getLowerBound(), state);
 							}
 						}
 					}
