@@ -8,6 +8,7 @@ import edu.rit.pj.Comm;
 import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.ParallelTeam;
 import edu.rit.pj.reduction.SharedBoolean;
+import edu.rit.pj.reduction.SharedInteger;
 import edu.rit.pj.reduction.SharedLong;
 import edu.rit.pj.reduction.SharedObject;
 /**
@@ -28,7 +29,7 @@ public class OptimalTSPSMP {
 	Stack<TSPState> rightStack;
 	Stack<TSPState> leftStack;
 	SortedMap<Long, TSPState> sharedStack;
-	SharedBoolean needMoreStates = new SharedBoolean(false);
+	SharedInteger needMoreStates = new SharedInteger(0);
 
 	/**
 	 * Constructs an OptimalTSPSMP solver object containing the Graph
@@ -136,9 +137,7 @@ public class OptimalTSPSMP {
 			public void run() throws Exception {
 				TreeMap<Long, TSPState> leftStack = new TreeMap<Long, TSPState>();
 				TreeMap<Long, TSPState> rightStack = new TreeMap<Long, TSPState>();
-
 				TSPState state = null;
-				int sharedStackCounter = 0;
 
 				synchronized(sharedStack) {
 					if(!sharedStack.isEmpty()) {
@@ -167,9 +166,9 @@ public class OptimalTSPSMP {
 							leftStack.put(left.getLowerBound(), left);
 							TSPState right = state.rightSplit();
 							if(right != null) {
-								if(needMoreStates.equals(true)) {
+								if(needMoreStates.get() > 0 ) {
 									sharedStack.put(right.getLowerBound(), right);
-									needMoreStates.set(false);
+									needMoreStates.decrementAndGet();
 								} else {
 									long lowerBound = right.getLowerBound();
 									while(rightStack.containsKey(lowerBound)) {
@@ -181,17 +180,25 @@ public class OptimalTSPSMP {
 						}
 					}
 					if(leftStack.isEmpty() && rightStack.isEmpty()) {
-						needMoreStates.set(true);
-						while(needMoreStates.equals(true)) { }
-						synchronized(sharedStack) {
-							if(!sharedStack.isEmpty()) {
-								state = sharedStack.remove(
-										sharedStack.firstKey());
-							} else {
-								state = null;
+						boolean done = false;
+						int waiting = needMoreStates.incrementAndGet();
+						while(needMoreStates.get() > waiting) {
+							if(needMoreStates.get() == Comm.world().size() ) {
+								done = true;
 							}
-							if( state != null ) {
-								leftStack.put( state.getLowerBound(), state);
+
+						}
+						if(done) {
+							synchronized(sharedStack) {
+								if(!sharedStack.isEmpty()) {
+									state = sharedStack.remove(
+											sharedStack.firstKey());
+								} else {
+									state = null;
+								}
+								if( state != null ) {
+									leftStack.put( state.getLowerBound(), state);
+								}
 							}
 						}
 					}
