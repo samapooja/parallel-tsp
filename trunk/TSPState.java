@@ -1,5 +1,15 @@
 import java.util.HashMap;
 
+/**
+ * This class represents a node of the binary search tree that represents
+ * our Traveling Salesman Problem. Each node contains a matrix representing the
+ * current options for travel from this node, the optimal cost of this node, 
+ * best next move possible as calculated by a heuristic, and the path so far.
+ *
+ * @author Danny Iland
+ * @author Robert Clark
+ *
+ */
 public class TSPState {
 	private final int[] nextBest;
 	private final long[][] matrix;
@@ -11,6 +21,13 @@ public class TSPState {
 	private long optimalCost;
 	private HashMap<Integer, Integer> path;
 
+	/**
+	 * Initializes a node from a given matrix. At creation, the optimalCost
+	 * row mappings and next best path are updated.
+	 * 
+	 * @param weightMatrix  The matrix from which to construct a TSPState
+	 * @param parent		The parent of this state in the tree
+	 */
 	public TSPState(long[][] weightMatrix, TSPState parent) {
 		this.matrix = weightMatrix;
 		this.size = weightMatrix.length;
@@ -33,7 +50,18 @@ public class TSPState {
 
 	}
 
-	public TSPState(long[][] weightMatrix, TSPState parent, int[] columnMap, int[] rowMap, int size) {
+	/**
+	 * Constructs a node from the given input data. After creation, performs
+	 * reduction and determines the optimal cost and best path from here.
+	 * 
+	 * @param weightMatrix The matrix representing the graph
+	 * @param parent	   The parent of this node
+	 * @param columnMap	   An array mapping weightMatrix to the original matrix
+	 * @param rowMap	   An array mapping weightMatrix to the original matrix
+	 * @param size		   The number of unspecified paths remaining 
+	 */
+	public TSPState(long[][] weightMatrix, TSPState parent, 
+			int[] columnMap, int[] rowMap, int size) {
 		this.matrix = weightMatrix;
 		this.parent = parent;
 		this.rowMap = rowMap;
@@ -51,22 +79,34 @@ public class TSPState {
 
 	}
 
+	/**
+	 * Returns the lowest possible path score for any child of this node
+	 */
+	public long getLowerBound() { 
+		return optimalCost; 
+	}
 
-	public long getLowerBound() { return optimalCost; };
-	public long[][] matrix() { return matrix; }
+	/**
+	 * Getter for the matrix backing this TSPState
+	 * @return the matrix
+	 */
+	public long[][] matrix() {
+		return matrix; 
+	}
 
 	/**
 	 * Check if this array represents a final state,
-	 * a state that cannot be divided anymore, i.e. has only one path remaining.
+	 * a state that cannot be divided anymore, i.e. has only one path remaining
 	 */
 	public boolean isFinalState() {
 		return (matrix.length < 1 || matrix[0].length < 1);
 	}
+
 	/**
-	 * This is a terminal node with only one path remaining.
-	 * Return that path.
-	 * @return
+	 * Called on terminal nodes
+	 * @return The path through the matrix that ends on this node
 	 */
+	@SuppressWarnings("unchecked")
 	public HashMap<Integer, Integer> getPath() {
 		if(path == null) {
 			if(this.parent == null) {
@@ -79,10 +119,16 @@ public class TSPState {
 		return this.path;
 	}
 
+	/**
+	 * Prints the cycle, beginning with 0, that represents the solution
+	 * to the traveling salesman problem held in path.
+	 * The path hashmap holds routes from key city to value city, exactly one
+	 * route per source and exactly one per destination.
+	 * @param path
+	 */
 	public static void printPath(HashMap<Integer, Integer> path) {
 		System.out.println("Printing best route:");
 		int index = 0;
-		// Counter only exists to stop incorrect cycles, like the ones produced from bad 
 		int counter = path.size();
 		do {
 			System.out.print(index + " , ");
@@ -95,10 +141,10 @@ public class TSPState {
 		System.out.println(0);
 	}
 
-	/*
+	/**
 	 * Reduces the values by first subtracting the minimum of every
 	 * column from each value, then subtracting the minimum of every
-	 * row from each value. This in essesence normalizes the data.
+	 * row from each value. This normalizes the data.
 	 * 
 	 * Returns the minimum possible value for a complete loop.
 	 */
@@ -141,16 +187,14 @@ public class TSPState {
 		//printMatrix();
 		return lower_bound;
 	}
-	/*
-	 * Calculate the resulting weighted graph after a left split at coords x, y
+
+	/**
+	 * Calculate the resulting weighted graph after left split at the nextBest
 	 */
 	public final TSPState leftSplit() {
 		int x = nextBest[0];
 		int y = nextBest[1];
-
-
 		long[][] newmatrix = new long[matrix.length-1][matrix.length-1];
-
 		int offset = 0;
 		for(int c = 0; c < matrix.length; c++) {
 			// skip x
@@ -160,13 +204,13 @@ public class TSPState {
 			}
 			System.arraycopy(matrix[c], 0, newmatrix[c-offset], 0, y);
 			if(matrix.length != y) {
-				System.arraycopy(matrix[c], y+1, newmatrix[c-offset], y, matrix[c].length - y - 1);
+				System.arraycopy(matrix[c], y+1, newmatrix[c-offset], 
+						y, matrix[c].length - y - 1);
 			}
 		}
 
 		int[] newCol = new int[matrix.length-1];
 		int[] newRow = new int[matrix.length-1];
-		
 		// Map the old rows and columns into new rows and columns
 		System.arraycopy(columnMap, 0, newCol, 0, y);
 		System.arraycopy(columnMap, y+1, newCol, y, (matrix.length-1)-y);
@@ -183,7 +227,7 @@ public class TSPState {
 			if (newCol[i] == x) {
 				columnExists = i;
 			}
-			
+
 		}
 		if(columnExists >= 0 && rowExists >= 0) {
 			newmatrix[rowExists][columnExists] = Long.MAX_VALUE;
@@ -191,8 +235,8 @@ public class TSPState {
 		return new TSPState(newmatrix, this, newCol, newRow, size);
 	}
 
-	/*
-	 * Calculate the resulting weighted graph after a right split at coords x, y
+	/**
+	 * Calculate the resulting weighted graph after right split at nextBest
 	 */
 	public final TSPState rightSplit() {
 		int x = nextBest[0];
@@ -206,30 +250,25 @@ public class TSPState {
 		}
 		newmatrix[x][y] = Long.MAX_VALUE;
 
-		// This shouldn't really be here, but it needs to be run because they are looked
-		// at later.
 		fixNextBest();
 		TSPState newState = new TSPState(newmatrix, this, columnMap, rowMap, size);
-		
-		/*
-		if(newState.optimalCost == Long.MAX_VALUE) {
-			return null;
-		}
-		*/
-
 		return newState;
 	}
-	
+
+	/**
+	 * Updates theBest to represent the correct nodes after modifying 
+	 * the backing matrix
+	 */
 	public final void fixNextBest() {
 		theBest[0] = rowMap[nextBest[0]];
 		theBest[1] = columnMap[nextBest[1]];
 	}
 
-	/*
-	 * Find the ZERO that when set to infinity, allows the most to
-	 * be reduced from its row and column. AKA find the element that,
-	 * when ignored, results in the largest minimum element of row +
-	 * minimum element of column.
+	/**
+	 * Find the element that, when ignored, results in the largest
+	 * minimum element of row + minimum element of column. This is a
+	 * heurustic for splitting most effectively, from Reingold's
+	 * Combinatorial Algorithms: Theory and Practice
 	 */
 	public final int[] bestCoord() {
 		if(nextBest != null) return nextBest;
@@ -244,7 +283,7 @@ public class TSPState {
 					long reduction = 
 						getNextLowestRowValue(matrix[x], y) 
 						+ getNextLowestColumnValue(matrix, y, x);
-					
+
 					if( reduction >= largestSoFar) {
 						retVal[0] = x;
 						retVal[1] = y;
@@ -257,7 +296,10 @@ public class TSPState {
 		return retVal;
 	}
 
-	// Helpers for bestCoord().
+
+	/**
+	 * A helper for bestCoord
+	 */
 	private final long getNextLowestRowValue(long[] row, int index) {
 		long lowest = Long.MAX_VALUE;
 		for(int i=0; i<row.length; i++) {
@@ -268,6 +310,9 @@ public class TSPState {
 		return lowest;
 	}
 
+	/**
+	 * A helper for bestCoord
+	 */
 	private final long getNextLowestColumnValue(long[][] array, int columnIndex, int elementIndex) {
 		long lowest = Long.MAX_VALUE;
 		for(int i=0; i<array.length; i++) {
@@ -277,8 +322,10 @@ public class TSPState {
 		}
 		return lowest;
 	}
-	/*
-	 * Print the state with labels reflecting ORIGINAL VALUES!
+
+	/**
+	 * Print the state with labels reflecting Original Values.
+	 * Useful during debugging.
 	 */
 	public final void printMatrix () {
 		System.out.println("Adjacency matrix of graph weights:\n");
@@ -299,5 +346,4 @@ public class TSPState {
 			System.out.println("\n");
 		}
 	}
-
 }
