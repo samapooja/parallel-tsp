@@ -188,7 +188,7 @@ public class OptimalTSPSMP {
 							}
 
 						}
-						if(done) {
+						if(!done) {
 							synchronized(sharedStack) {
 								if(!sharedStack.isEmpty()) {
 									state = sharedStack.remove(
