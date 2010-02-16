@@ -99,7 +99,7 @@ public class OptimalTSPSMP {
 		System.arraycopy(weightMatrix, 0, startMatrix, 0, weightMatrix.length);
 		TSPState startState = new TSPState(startMatrix, null);
 
-		for(int i = 0 ; i <= 8; i++) {
+		for(int i = 0 ; i <= Comm.world().size(); i++) {
 			if( startState != null && !startState.isFinalState() ) {
 				TSPState left = startState.leftSplit();
 				TSPState right = startState.rightSplit();
